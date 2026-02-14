@@ -27,16 +27,16 @@ export default function Home() {
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
               <Link
-                href="/signup"
+                href="/login"
                 className="inline-flex h-11 items-center justify-center rounded-full bg-[#E11D48] px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-[#BE123C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200"
               >
-                Get Started
+                Admin Login
               </Link>
               <Link
-                href="/login"
+                href="/volunteer-login"
                 className="inline-flex h-11 items-center justify-center rounded-full border border-slate-200 bg-white px-6 text-sm font-medium text-slate-900 shadow-sm transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-200"
               >
-                Login
+                Volunteer Login
               </Link>
             </div>
 

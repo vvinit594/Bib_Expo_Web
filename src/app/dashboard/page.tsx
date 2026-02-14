@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 type ParticipantStatus = "pending" | "collected" | "on-spot";
 
@@ -80,11 +81,31 @@ const MOCK_ACTIVITY: Activity[] = [
   },
 ];
 
+type AuthUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  counterName: string | null;
+};
+
 export default function DashboardPage() {
+  const router = useRouter();
+  const [user, setUser] = React.useState<AuthUser | null>(null);
   const [query, setQuery] = React.useState("");
   const [participants] = React.useState<Participant[]>(MOCK_PARTICIPANTS);
   const [showBehalfModalFor, setShowBehalfModalFor] = React.useState<Participant | null>(null);
   const [showOnSpotModal, setShowOnSpotModal] = React.useState(false);
+
+  const isAdmin = user?.role === "ADMIN";
+  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => data?.user && setUser(data.user))
+      .catch(() => {});
+  }, []);
 
   const filtered = React.useMemo(() => {
     if (!query.trim()) return participants;
@@ -114,7 +135,9 @@ export default function DashboardPage() {
             </span>
             <div className="flex flex-col">
               <span className="text-sm font-semibold">Bib Expo</span>
-              <span className="text-[0.7rem] text-slate-500">Volunteer Dashboard</span>
+              <span className="text-[0.7rem] text-slate-500">
+                {isAdmin ? "Admin Dashboard" : "Volunteer Dashboard"}
+              </span>
             </div>
           </div>
 
@@ -126,16 +149,130 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="hidden items-end gap-2 text-xs sm:flex">
+            {/* Desktop: inline admin controls + user info */}
+            {isAdmin && (
+              <>
+                <span className="hidden rounded-full bg-amber-100 px-3 py-1 text-[0.7rem] font-semibold text-amber-800 md:inline-flex">
+                  Admin
+                </span>
+                <Link
+                  href="/admin"
+                  className="hidden rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 md:inline-flex"
+                >
+                  Create Volunteer
+                </Link>
+                <Link
+                  href="/admin/import"
+                  className="hidden rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 md:inline-flex"
+                >
+                  Import Excel
+                </Link>
+              </>
+            )}
+            <div className="hidden items-end gap-2 text-xs md:flex">
               <div className="flex flex-col items-end">
-                <span className="font-medium text-slate-900">Counter 4 – 10K</span>
-                <span className="text-[0.7rem] text-slate-500">Volunteer: Nikhil</span>
+                <span className="font-medium text-slate-900">
+                  {user?.counterName ?? "Counter 4 – 10K"}
+                </span>
+                <span className="text-[0.7rem] text-slate-500">
+                  {isAdmin ? "Admin" : "Volunteer"}: {user?.name ?? "—"}
+                </span>
               </div>
               <span className="grid size-8 place-items-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700">
-                N
+                {user?.name?.charAt(0)?.toUpperCase() ?? "—"}
               </span>
             </div>
-            <button className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50">
+
+            {/* Mobile/tablet: menu toggle + dropdown */}
+            <div className="relative md:hidden">
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen((o) => !o)}
+                className="inline-flex size-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50"
+                aria-label="Toggle menu"
+                aria-expanded={mobileMenuOpen}
+              >
+                <svg
+                  className="size-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  {mobileMenuOpen ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  )}
+                </svg>
+              </button>
+
+              {mobileMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    aria-hidden="true"
+                    onClick={() => setMobileMenuOpen(false)}
+                  />
+                  <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-xl border border-slate-200 bg-white py-2 shadow-xl">
+                    <div className="border-b border-slate-100 px-4 py-3">
+                      <p className="text-xs font-medium text-slate-900">
+                        {user?.counterName ?? "Counter 4 – 10K"}
+                      </p>
+                      <p className="text-[0.7rem] text-slate-500">
+                        {isAdmin ? "Admin" : "Volunteer"}: {user?.name ?? "—"}
+                      </p>
+                    </div>
+                    {isAdmin && (
+                      <div className="border-b border-slate-100 px-2 py-2">
+                        <span className="mb-2 inline-flex rounded-full bg-amber-100 px-3 py-1 text-[0.7rem] font-semibold text-amber-800">
+                          Admin
+                        </span>
+                        <div className="mt-2 flex flex-col gap-1">
+                          <Link
+                            href="/admin"
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="flex h-11 items-center rounded-lg px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                          >
+                            Create Volunteer
+                          </Link>
+                          <Link
+                            href="/admin/import"
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="flex h-11 items-center rounded-lg px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                          >
+                            Import Excel
+                          </Link>
+                        </div>
+                      </div>
+                    )}
+                    <div className="px-2 py-2">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setMobileMenuOpen(false);
+                          await fetch("/api/auth/logout", { method: "POST" });
+                          router.push("/login");
+                          router.refresh();
+                        }}
+                        className="flex h-11 w-full items-center rounded-lg px-3 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                      >
+                        Logout
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={async () => {
+                await fetch("/api/auth/logout", { method: "POST" });
+                router.push("/login");
+                router.refresh();
+              }}
+              className="hidden rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 md:inline-flex"
+            >
               Logout
             </button>
           </div>

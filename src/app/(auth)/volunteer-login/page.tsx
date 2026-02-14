@@ -8,7 +8,7 @@ import { AuthCard } from "@/components/auth/AuthCard";
 import { AuthInput } from "@/components/auth/AuthInput";
 import { PrimaryButton } from "@/components/auth/PrimaryButton";
 
-function LoginForm() {
+function VolunteerLoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = React.useState<string | null>(null);
@@ -29,7 +29,7 @@ function LoginForm() {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/login", {
+      const res = await fetch("/api/auth/volunteer-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -56,11 +56,11 @@ function LoginForm() {
     <AuthCard>
       <div>
         <p className="text-sm font-semibold tracking-wide text-[color:var(--muted-foreground)]">
-          Admin Access
+          Volunteer Access
         </p>
-        <h2 className="mt-2 text-2xl font-semibold">Admin Login</h2>
+        <h2 className="mt-2 text-2xl font-semibold">Login</h2>
         <p className="mt-2 text-sm text-[color:var(--muted-foreground)]">
-          Sign in to manage volunteers, import data, and oversee expo operations.
+          Sign in to search participants and mark kit collection status.
         </p>
       </div>
 
@@ -88,10 +88,10 @@ function LoginForm() {
             Forgot password? (coming soon)
           </span>
           <Link
-            href="/volunteer-login"
+            href="/login"
             className="text-xs font-semibold text-[color:var(--primary)] hover:underline"
           >
-            Volunteer login
+            Admin login
           </Link>
         </div>
 
@@ -103,11 +103,10 @@ function LoginForm() {
   );
 }
 
-export default function LoginPage() {
+export default function VolunteerLoginPage() {
   return (
     <React.Suspense fallback={<AuthCard><div className="animate-pulse h-64" /></AuthCard>}>
-      <LoginForm />
+      <VolunteerLoginForm />
     </React.Suspense>
   );
 }
-
