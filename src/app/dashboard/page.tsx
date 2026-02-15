@@ -4,12 +4,13 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-type ParticipantStatus = "pending" | "collected" | "on-spot";
+type ParticipantStatus = "pending" | "collected" | "collected-by-behalf" | "on-spot";
 
 type Participant = {
   id: string;
   name: string;
   bib: string;
+  bibNumber?: number;
   category: string;
   status: ParticipantStatus;
   group?: string;
@@ -19,67 +20,6 @@ type Participant = {
   collectedAt?: string;
   collectedBy?: string;
 };
-
-const MOCK_PARTICIPANTS: Participant[] = [
-  {
-    id: "1",
-    name: "Ananya Rao",
-    bib: "#2048",
-    category: "10K",
-    status: "pending",
-    registeredOn: "2026-01-22",
-    emailVerified: true,
-    paymentStatus: "paid",
-    group: "Team Velocity (5)",
-  },
-  {
-    id: "2",
-    name: "Rahul Mehta",
-    bib: "#2051",
-    category: "Half Marathon",
-    status: "collected",
-    registeredOn: "2026-01-18",
-    emailVerified: true,
-    paymentStatus: "paid",
-    collectedAt: "10:42 AM",
-    collectedBy: "Self",
-  },
-  {
-    id: "3",
-    name: "Team Velocity (5 Members)",
-    bib: "Group • 5 bibs",
-    category: "Mixed",
-    status: "on-spot",
-    registeredOn: "On-spot",
-    emailVerified: false,
-    paymentStatus: "paid",
-    group: "Team Velocity (5)",
-  },
-];
-
-type Activity = {
-  id: string;
-  description: string;
-  time: string;
-};
-
-const MOCK_ACTIVITY: Activity[] = [
-  {
-    id: "a1",
-    description: "Rahul Mehta – Collected – Half Marathon",
-    time: "10:42 AM",
-  },
-  {
-    id: "a2",
-    description: "Team Velocity (5 Members) – Bulk Collected",
-    time: "10:50 AM",
-  },
-  {
-    id: "a3",
-    description: "Ananya Rao – Pending – 10K",
-    time: "10:55 AM",
-  },
-];
 
 type AuthUser = {
   id: string;
@@ -93,12 +33,43 @@ export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = React.useState<AuthUser | null>(null);
   const [query, setQuery] = React.useState("");
-  const [participants] = React.useState<Participant[]>(MOCK_PARTICIPANTS);
+  const [participants, setParticipants] = React.useState<Participant[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const [showBehalfModalFor, setShowBehalfModalFor] = React.useState<Participant | null>(null);
   const [showOnSpotModal, setShowOnSpotModal] = React.useState(false);
+  const [collectingId, setCollectingId] = React.useState<string | null>(null);
+  const [stats, setStats] = React.useState<{
+    total: number;
+    collected: number;
+    pending: number;
+    onSpot: number;
+  } | null>(null);
+  const [behalfForm, setBehalfForm] = React.useState({
+    name: "",
+    contact: "",
+    relation: "",
+  });
 
   const isAdmin = user?.role === "ADMIN";
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+
+  async function fetchParticipants() {
+    setLoading(true);
+    try {
+      const q = query.trim() ? `?q=${encodeURIComponent(query)}` : "";
+      const res = await fetch(`/api/participants${q}`);
+      const data = await res.json();
+      if (res.ok && Array.isArray(data.participants)) {
+        setParticipants(data.participants);
+      } else {
+        setParticipants([]);
+      }
+    } catch {
+      setParticipants([]);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   React.useEffect(() => {
     fetch("/api/auth/me")
@@ -107,18 +78,42 @@ export default function DashboardPage() {
       .catch(() => {});
   }, []);
 
-  const filtered = React.useMemo(() => {
-    if (!query.trim()) return participants;
-    const q = query.toLowerCase();
-    return participants.filter((p) => {
-      return (
-        p.name.toLowerCase().includes(q) ||
-        p.bib.toLowerCase().includes(q) ||
-        (p.category && p.category.toLowerCase().includes(q)) ||
-        (p.group && p.group.toLowerCase().includes(q))
-      );
-    });
-  }, [participants, query]);
+  React.useEffect(() => {
+    const t = setTimeout(() => fetchParticipants(), 300);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  React.useEffect(() => {
+    fetch("/api/participants/stats")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => data && setStats(data))
+      .catch(() => {});
+  }, [participants]);
+
+  async function handleMarkCollected(p: Participant, type: "self" | "behalf", extra?: { name: string; contact: string; relation: string }) {
+    if (collectingId) return;
+    setCollectingId(p.id);
+    try {
+      const res = await fetch(`/api/participants/${p.id}/collect`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          type === "self"
+            ? { type: "self" }
+            : { type: "behalf", behalfName: extra?.name, behalfContact: extra?.contact, behalfRelation: extra?.relation }
+        ),
+      });
+      if (res.ok) {
+        setShowBehalfModalFor(null);
+        setBehalfForm({ name: "", contact: "", relation: "" });
+        fetchParticipants();
+      }
+    } finally {
+      setCollectingId(null);
+    }
+  }
+
+  const filtered = participants;
 
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -389,16 +384,18 @@ export default function DashboardPage() {
                       className={
                         p.status === "pending"
                           ? "inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-[0.7rem] font-semibold text-amber-700 ring-1 ring-amber-100"
-                          : p.status === "collected"
+                          : p.status === "collected" || p.status === "collected-by-behalf"
                             ? "inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-[0.7rem] font-semibold text-emerald-700 ring-1 ring-emerald-100"
                             : "inline-flex items-center rounded-full bg-sky-50 px-3 py-1 text-[0.7rem] font-semibold text-sky-700 ring-1 ring-sky-100"
                       }
                     >
                       {p.status === "pending"
                         ? "Pending"
-                        : p.status === "collected"
-                          ? "Collected"
-                          : "On-spot"}
+                        : p.status === "collected-by-behalf"
+                          ? "Collected (Behalf)"
+                          : p.status === "collected"
+                            ? "Collected"
+                            : "On-spot"}
                     </span>
                   </div>
 
@@ -441,19 +438,25 @@ export default function DashboardPage() {
                     <div className="flex flex-wrap gap-2">
                       {p.status === "pending" && (
                         <>
-                          <button className="inline-flex items-center justify-center rounded-full bg-[#E11D48] px-3.5 py-1.5 text-[0.7rem] font-semibold text-white shadow-sm transition hover:bg-[#BE123C]">
-                            Mark as Collected
+                          <button
+                            type="button"
+                            onClick={() => handleMarkCollected(p, "self")}
+                            disabled={collectingId === p.id}
+                            className="inline-flex items-center justify-center rounded-full bg-[#E11D48] px-3.5 py-1.5 text-[0.7rem] font-semibold text-white shadow-sm transition hover:bg-[#BE123C] disabled:opacity-60"
+                          >
+                            {collectingId === p.id ? "..." : "Mark as Collected"}
                           </button>
                           <button
                             type="button"
                             onClick={() => setShowBehalfModalFor(p)}
-                            className="inline-flex items-center justify-center rounded-full border border-rose-200 bg-rose-50 px-3.5 py-1.5 text-[0.7rem] font-semibold text-rose-700 shadow-sm transition hover:bg-rose-100"
+                            disabled={!!collectingId}
+                            className="inline-flex items-center justify-center rounded-full border border-rose-200 bg-rose-50 px-3.5 py-1.5 text-[0.7rem] font-semibold text-rose-700 shadow-sm transition hover:bg-rose-100 disabled:opacity-60"
                           >
                             Collected on Behalf
                           </button>
                         </>
                       )}
-                      {p.status === "collected" && (
+                      {(p.status === "collected" || p.status === "collected-by-behalf") && (
                         <button
                           disabled
                           className="inline-flex items-center justify-center rounded-full bg-emerald-50 px-3.5 py-1.5 text-[0.7rem] font-semibold text-emerald-700 ring-1 ring-emerald-100"
@@ -474,9 +477,14 @@ export default function DashboardPage() {
                 </article>
               ))}
 
-              {filtered.length === 0 && (
+              {loading && (
+                <p className="py-6 text-center text-sm text-slate-500">Loading...</p>
+              )}
+              {!loading && filtered.length === 0 && (
                 <p className="py-6 text-center text-sm text-slate-500">
-                  No participants match this search yet.
+                  {participants.length === 0
+                    ? "No participants yet. Upload Excel from Admin Import to get started."
+                    : "No participants match this search."}
                 </p>
               )}
             </div>
@@ -489,12 +497,20 @@ export default function DashboardPage() {
               <span className="text-[0.7rem] text-slate-500">Last 20 actions</span>
             </div>
             <ul className="divide-y divide-slate-100 text-[0.75rem]">
-              {MOCK_ACTIVITY.map((item) => (
-                <li key={item.id} className="flex items-center justify-between py-2.5">
-                  <span className="text-slate-700">{item.description}</span>
-                  <span className="text-slate-400">{item.time}</span>
-                </li>
-              ))}
+              {participants
+                .filter((p) => p.status !== "pending")
+                .slice(0, 20)
+                .map((p) => (
+                  <li key={p.id} className="flex items-center justify-between py-2.5">
+                    <span className="text-slate-700">
+                      {p.name} – {p.status === "collected" ? "Collected" : "Collected (Behalf)"} – {p.category || "—"}
+                    </span>
+                    <span className="text-slate-400">{p.collectedAt ?? "—"}</span>
+                  </li>
+                ))}
+              {participants.filter((p) => p.status !== "pending").length === 0 && (
+                <li className="py-4 text-center text-slate-500">No collection activity yet</li>
+              )}
             </ul>
           </div>
         </section>
@@ -509,23 +525,19 @@ export default function DashboardPage() {
             <dl className="mt-4 space-y-3">
               <div className="flex items-center justify-between">
                 <dt className="text-slate-300">Total Participants</dt>
-                <dd className="text-sm font-semibold text-white">5,000</dd>
+                <dd className="text-sm font-semibold text-white">{stats?.total ?? "—"}</dd>
               </div>
               <div className="flex items-center justify-between">
                 <dt className="text-slate-300">Collected</dt>
-                <dd className="text-sm font-semibold text-emerald-400">3,720</dd>
+                <dd className="text-sm font-semibold text-emerald-400">{stats?.collected ?? "—"}</dd>
               </div>
               <div className="flex items-center justify-between">
                 <dt className="text-slate-300">Pending</dt>
-                <dd className="text-sm font-semibold text-amber-300">1,120</dd>
+                <dd className="text-sm font-semibold text-amber-300">{stats?.pending ?? "—"}</dd>
               </div>
               <div className="flex items-center justify-between">
                 <dt className="text-slate-300">On-spot</dt>
-                <dd className="text-sm font-semibold text-sky-300">145</dd>
-              </div>
-              <div className="flex items-center justify-between">
-                <dt className="text-slate-300">Bulk Collections Today</dt>
-                <dd className="text-sm font-semibold text-violet-300">28</dd>
+                <dd className="text-sm font-semibold text-sky-300">{stats?.onSpot ?? "—"}</dd>
               </div>
             </dl>
           </div>
@@ -550,10 +562,19 @@ export default function DashboardPage() {
               Record who is collecting the kit for{" "}
               <span className="font-medium text-slate-800">{showBehalfModalFor.name}</span>.
             </p>
-            <form className="mt-4 space-y-3 text-sm">
+            <form
+              className="mt-4 space-y-3 text-sm"
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleMarkCollected(showBehalfModalFor, "behalf", behalfForm);
+              }}
+            >
               <div className="space-y-1">
                 <label className="text-xs font-medium text-slate-700">Collector name</label>
                 <input
+                  required
+                  value={behalfForm.name}
+                  onChange={(e) => setBehalfForm((f) => ({ ...f, name: e.target.value }))}
                   className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-rose-300 focus:bg-white focus:ring-2 focus:ring-rose-200"
                   placeholder="Full name of collector"
                 />
@@ -561,6 +582,8 @@ export default function DashboardPage() {
               <div className="space-y-1">
                 <label className="text-xs font-medium text-slate-700">Contact number</label>
                 <input
+                  value={behalfForm.contact}
+                  onChange={(e) => setBehalfForm((f) => ({ ...f, contact: e.target.value }))}
                   className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-rose-300 focus:bg-white focus:ring-2 focus:ring-rose-200"
                   placeholder="+91 ..."
                 />
@@ -568,35 +591,29 @@ export default function DashboardPage() {
               <div className="space-y-1">
                 <label className="text-xs font-medium text-slate-700">Relation</label>
                 <input
+                  value={behalfForm.relation}
+                  onChange={(e) => setBehalfForm((f) => ({ ...f, relation: e.target.value }))}
                   className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-rose-300 focus:bg-white focus:ring-2 focus:ring-rose-200"
                   placeholder="Friend, family, coach..."
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-slate-700">
-                  Notes{" "}
-                  <span className="font-normal text-slate-400">(optional)</span>
-                </label>
-                <textarea
-                  rows={3}
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs outline-none focus:border-rose-300 focus:bg-white focus:ring-2 focus:ring-rose-200"
-                  placeholder="Any additional context for this collection..."
                 />
               </div>
               <div className="mt-3 flex justify-end gap-2 text-xs">
                 <button
                   type="button"
-                  onClick={() => setShowBehalfModalFor(null)}
+                  onClick={() => {
+                    setShowBehalfModalFor(null);
+                    setBehalfForm({ name: "", contact: "", relation: "" });
+                  }}
                   className="inline-flex h-8 items-center justify-center rounded-full border border-slate-200 bg-white px-3 font-medium text-slate-600 hover:bg-slate-50"
                 >
                   Cancel
                 </button>
                 <button
-                  type="button"
-                  onClick={() => setShowBehalfModalFor(null)}
-                  className="inline-flex h-8 items-center justify-center rounded-full bg-[#E11D48] px-4 font-semibold text-white shadow-sm hover:bg-[#BE123C]"
+                  type="submit"
+                  disabled={collectingId === showBehalfModalFor.id || !behalfForm.name.trim()}
+                  className="inline-flex h-8 items-center justify-center rounded-full bg-[#E11D48] px-4 font-semibold text-white shadow-sm hover:bg-[#BE123C] disabled:opacity-60"
                 >
-                  Confirm Collection
+                  {collectingId === showBehalfModalFor.id ? "Saving..." : "Confirm Collection"}
                 </button>
               </div>
             </form>
