@@ -16,6 +16,7 @@ type ImportResult = {
 
 export default function AdminImportPage() {
   const router = useRouter();
+  const [eventName, setEventName] = React.useState("");
   const [file, setFile] = React.useState<File | null>(null);
   const [uploading, setUploading] = React.useState(false);
   const [result, setResult] = React.useState<ImportResult | null>(null);
@@ -59,6 +60,10 @@ export default function AdminImportPage() {
 
   async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
+    if (!eventName.trim()) {
+      setError("Event name is required");
+      return;
+    }
     if (!file) {
       setError("Please select an Excel file");
       return;
@@ -69,6 +74,7 @@ export default function AdminImportPage() {
 
     try {
       const formData = new FormData();
+      formData.append("eventName", eventName.trim());
       formData.append("file", file);
 
       const res = await fetch("/api/admin/import-excel", {
@@ -176,6 +182,20 @@ export default function AdminImportPage() {
           </p>
 
           <form onSubmit={handleUpload} className="mt-6 space-y-4">
+            <div className="space-y-1">
+              <label htmlFor="eventName" className="block text-sm font-medium text-slate-700">
+                Event Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="eventName"
+                type="text"
+                value={eventName}
+                onChange={(e) => setEventName(e.target.value)}
+                placeholder="e.g. Run For Hope"
+                required
+                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-200"
+              />
+            </div>
             <div
               onDrop={handleDrop}
               onDragOver={handleDragOver}
@@ -232,7 +252,7 @@ export default function AdminImportPage() {
 
             <button
               type="submit"
-              disabled={uploading || !file}
+              disabled={uploading || !eventName.trim() || !file}
               className="h-11 w-full rounded-xl bg-[#E11D48] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#BE123C] disabled:opacity-60"
             >
               {uploading ? "Importing..." : "Import Excel"}

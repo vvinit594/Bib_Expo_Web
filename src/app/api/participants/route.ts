@@ -36,29 +36,58 @@ export async function GET(request: Request) {
       );
     }
 
-    const mapped = filtered.map((p) => ({
-      id: p.id,
-      bib: `#${p.bibNumber}`,
-      bibNumber: p.bibNumber,
-      name: p.name,
-      category: p.category ?? "",
-      status: p.collectionStatus.toLowerCase().replace("_", "-"),
-      group: p.groupName ?? undefined,
-      registeredOn: p.registeredOn ?? "",
-      emailVerified: p.emailVerified,
-      paymentStatus: p.paymentStatus,
-      collectedAt: p.collectedAt
+    const mapped = filtered.map((p) => {
+      // Normalized status for UI:
+      // - Pending + EXCEL  -> "pending"
+      // - Pending + ON_SPOT -> "on-spot"
+      // - Collected / Collected_By_Behalf -> "collected"
+      const status =
+        p.collectionStatus === "Pending"
+          ? p.source === "ON_SPOT"
+            ? "on-spot"
+            : "pending"
+          : "collected";
+
+      const collectedAt = p.collectedAt
         ? p.collectedAt.toLocaleTimeString("en-IN", {
             hour: "2-digit",
             minute: "2-digit",
           })
-        : undefined,
-      collectedBy: p.collectedByType === "Self"
-        ? "Self"
-        : p.collectedByType === "Behalf" && p.collectedByName
-          ? `Behalf (${p.collectedByName})`
-          : p.collectedByType ?? undefined,
-    }));
+        : undefined;
+
+      let collectedBy: string | undefined;
+      if (p.collectionStatus !== "Pending" && p.collectedByName) {
+        // Prefer the new collectionMethod field when present
+        if (p.collectionMethod === "BULK") {
+          collectedBy = `Bulk (${p.collectedByName})`;
+        } else if (p.collectionMethod === "BEHALF") {
+          collectedBy = `Behalf (${p.collectedByName})`;
+        } else if (p.collectionMethod === "SELF") {
+          collectedBy = "Self";
+        } else {
+          // Backwards compatibility: fall back to collectedByType for old records
+          if (p.collectedByType === "Self") collectedBy = "Self";
+          else if (p.collectedByType === "Behalf") collectedBy = `Behalf (${p.collectedByName})`;
+        }
+      } else if (p.collectionStatus !== "Pending" && p.collectedByType === "Self") {
+        collectedBy = "Self";
+      }
+
+      return {
+        id: p.id,
+        bib: `#${p.bibNumber}`,
+        bibNumber: p.bibNumber,
+        name: p.name,
+        category: p.category ?? "",
+        status,
+        group: p.groupName ?? undefined,
+        registeredOn: p.registeredOn ?? "",
+        emailVerified: p.emailVerified,
+        paymentStatus: p.paymentStatus,
+        collectedAt,
+        collectedBy,
+      };
+    });
 
     return NextResponse.json({ participants: mapped });
   } catch (err) {

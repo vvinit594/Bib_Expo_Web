@@ -14,6 +14,7 @@ export async function POST() {
 
   try {
     const result = await prisma.participant.deleteMany({});
+    await prisma.$executeRaw`DELETE FROM "ExpoEvent"`;
     return NextResponse.json({
       success: true,
       deleted: result.count,

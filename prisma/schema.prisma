@@ -34,6 +34,12 @@ enum ParticipantSource {
   ON_SPOT
 }
 
+model ExpoEvent {
+  id           String        @id @default(uuid())
+  name         String
+  createdAt    DateTime      @default(now())
+  participants Participant[]
+}
 
 model Participant {
   id                     String            @id @default(uuid())
@@ -50,9 +56,11 @@ model Participant {
   emailVerified          Boolean           @default(false)
   paymentStatus          String            @default("paid")
   source                 ParticipantSource @default(EXCEL)
+  eventId                String?
 
   collectionStatus       CollectionStatus  @default(Pending)
   collectedByType        CollectedByType?
+  collectionMethod       String?
   collectedByName        String?
   collectedByContact     String?
   collectedByRelation    String?
@@ -60,10 +68,12 @@ model Participant {
   collectedAt            DateTime?
 
   collectedByVolunteer   Volunteer?        @relation(fields: [collectedByVolunteerId], references: [id])
+  expoEvent              ExpoEvent?        @relation(fields: [eventId], references: [id])
   createdAt              DateTime          @default(now())
   updatedAt              DateTime          @updatedAt
 
   @@index([collectedByVolunteerId])
+  @@index([eventId])
 }
 
 model Volunteer {

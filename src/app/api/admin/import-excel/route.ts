@@ -104,6 +104,14 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
+    const eventName = String(formData.get("eventName") ?? "").trim();
+
+    if (!eventName) {
+      return NextResponse.json(
+        { error: "Event name is required" },
+        { status: 400 }
+      );
+    }
 
     if (!file || !file.size) {
       return NextResponse.json(
@@ -198,6 +206,16 @@ export async function POST(request: Request) {
 
     const nextBib = BIB_START;
 
+    const [eventRow] = await prisma.$queryRaw<[{ id: string }]>`
+      INSERT INTO "ExpoEvent" (id, name, "createdAt")
+      VALUES (gen_random_uuid(), ${eventName}, NOW())
+      RETURNING id
+    `;
+    const eventId = eventRow?.id;
+    if (!eventId) {
+      return NextResponse.json({ error: "Failed to create event" }, { status: 500 });
+    }
+
     const toInsert = parsed.map((p, idx) => ({
       bibNumber: nextBib + idx,
       name: p.name,
@@ -211,6 +229,7 @@ export async function POST(request: Request) {
       registeredOn: null,
       emailVerified: !!p.email,
       paymentStatus: p.paymentStatus,
+      eventId,
     }));
 
     await prisma.participant.createMany({

@@ -49,8 +49,30 @@ export default function DashboardPage() {
     contact: "",
     relation: "",
   });
+  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
+  const [showBulkModal, setShowBulkModal] = React.useState(false);
+  const [bulkForm, setBulkForm] = React.useState({
+    name: "",
+    contact: "",
+    relation: "",
+    idProof: "",
+  });
+  const [bulkCollecting, setBulkCollecting] = React.useState(false);
+  const [bulkSuccessMessage, setBulkSuccessMessage] = React.useState<string | null>(null);
+  const [eventName, setEventName] = React.useState<string | null>(null);
 
   const isAdmin = user?.role === "ADMIN";
+
+  const isPending = (p: Participant) => p.status === "pending" || p.status === "on-spot";
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+  const selectedCount = selectedIds.size;
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
   async function fetchParticipants() {
@@ -90,6 +112,26 @@ export default function DashboardPage() {
       .catch(() => {});
   }, [participants]);
 
+  React.useEffect(() => {
+    fetch("/api/event/current")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setEventName(data?.name ?? null))
+      .catch(() => setEventName(null));
+  }, [participants]);
+
+  // Keep selection in sync: remove ids that are no longer pending (e.g. collected elsewhere)
+  React.useEffect(() => {
+    if (selectedIds.size === 0) return;
+    const pendingIds = new Set(participants.filter(isPending).map((p) => p.id));
+    setSelectedIds((prev) => {
+      const next = new Set<string>();
+      prev.forEach((id) => {
+        if (pendingIds.has(id)) next.add(id);
+      });
+      return next.size === prev.size ? prev : next;
+    });
+  }, [participants]);
+
   async function handleMarkCollected(p: Participant, type: "self" | "behalf", extra?: { name: string; contact: string; relation: string }) {
     if (collectingId) return;
     setCollectingId(p.id);
@@ -110,6 +152,41 @@ export default function DashboardPage() {
       }
     } finally {
       setCollectingId(null);
+    }
+  }
+
+  async function handleBulkCollect(e: React.FormEvent) {
+    e.preventDefault();
+    if (selectedCount === 0 || !bulkForm.name.trim() || bulkCollecting) return;
+    setBulkCollecting(true);
+    setBulkSuccessMessage(null);
+    try {
+      const res = await fetch("/api/participants/bulk-collect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          participantIds: Array.from(selectedIds),
+          behalfName: bulkForm.name.trim(),
+          behalfContact: bulkForm.contact.trim() || undefined,
+          behalfRelation: bulkForm.relation.trim() || undefined,
+          idProof: bulkForm.idProof.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setBulkSuccessMessage(data.message ?? "Bulk collection completed successfully.");
+        setSelectedIds(new Set());
+        setShowBulkModal(false);
+        setBulkForm({ name: "", contact: "", relation: "", idProof: "" });
+        fetchParticipants();
+        setTimeout(() => setBulkSuccessMessage(null), 5000);
+      } else {
+        setBulkSuccessMessage(data.error ?? "Bulk collection failed.");
+      }
+    } catch {
+      setBulkSuccessMessage("Bulk collection failed. Please try again.");
+    } finally {
+      setBulkCollecting(false);
     }
   }
 
@@ -137,10 +214,10 @@ export default function DashboardPage() {
           </div>
 
           <div className="hidden items-center gap-3 md:flex">
-            <button className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm">
+            <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm">
               <span className="size-2 rounded-full bg-emerald-500" />
-              <span>Mumbai Marathon 2026</span>
-            </button>
+              <span>{eventName ?? "No Active Event"}</span>
+            </span>
           </div>
 
           <div className="flex items-center gap-3">
@@ -211,6 +288,9 @@ export default function DashboardPage() {
                   <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-xl border border-slate-200 bg-white py-2 shadow-xl">
                     <div className="border-b border-slate-100 px-4 py-3">
                       <p className="text-xs font-medium text-slate-900">
+                        {eventName ?? "No Active Event"}
+                      </p>
+                      <p className="text-[0.7rem] text-slate-500">
                         {user?.counterName ?? "Counter 4 – 10K"}
                       </p>
                       <p className="text-[0.7rem] text-slate-500">
@@ -349,15 +429,30 @@ export default function DashboardPage() {
 
           {/* Results */}
           <div className="space-y-3 rounded-2xl bg-white p-4 shadow-sm shadow-slate-900/5 ring-1 ring-slate-200 sm:p-5">
-            <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
               <span>
                 Showing <span className="font-semibold text-slate-900">{filtered.length}</span>{" "}
                 matches
               </span>
-              <button className="hidden text-[0.7rem] font-medium text-slate-600 underline-offset-2 hover:underline sm:inline">
-                Advanced filters (coming soon)
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowBulkModal(true)}
+                  disabled={selectedCount === 0}
+                  className="inline-flex h-9 items-center justify-center rounded-full bg-[#E11D48] px-4 text-[0.75rem] font-semibold text-white shadow-sm transition hover:bg-[#BE123C] disabled:opacity-50 disabled:pointer-events-none"
+                >
+                  🔴 Bulk Collection{selectedCount > 0 ? ` (${selectedCount})` : ""}
+                </button>
+                <button className="hidden text-[0.7rem] font-medium text-slate-600 underline-offset-2 hover:underline sm:inline">
+                  Advanced filters (coming soon)
+                </button>
+              </div>
             </div>
+            {bulkSuccessMessage && (
+              <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                {bulkSuccessMessage}
+              </p>
+            )}
 
             <div className="space-y-3">
               {filtered.map((p) => (
@@ -380,23 +475,34 @@ export default function DashboardPage() {
                         <p className="mt-1 text-[0.7rem] text-slate-500">Group: {p.group}</p>
                       ) : null}
                     </div>
-                    <span
-                      className={
-                        p.status === "pending"
-                          ? "inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-[0.7rem] font-semibold text-amber-700 ring-1 ring-amber-100"
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={
+                          p.status === "pending"
+                            ? "inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-[0.7rem] font-semibold text-amber-700 ring-1 ring-amber-100"
+                            : p.status === "collected" || p.status === "collected-by-behalf"
+                              ? "inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-[0.7rem] font-semibold text-emerald-700 ring-1 ring-emerald-100"
+                              : "inline-flex items-center rounded-full bg-sky-50 px-3 py-1 text-[0.7rem] font-semibold text-sky-700 ring-1 ring-sky-100"
+                        }
+                      >
+                        {p.status === "pending"
+                          ? "Pending"
                           : p.status === "collected" || p.status === "collected-by-behalf"
-                            ? "inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-[0.7rem] font-semibold text-emerald-700 ring-1 ring-emerald-100"
-                            : "inline-flex items-center rounded-full bg-sky-50 px-3 py-1 text-[0.7rem] font-semibold text-sky-700 ring-1 ring-sky-100"
-                      }
-                    >
-                      {p.status === "pending"
-                        ? "Pending"
-                        : p.status === "collected-by-behalf"
-                          ? "Collected (Behalf)"
-                          : p.status === "collected"
                             ? "Collected"
                             : "On-spot"}
-                    </span>
+                      </span>
+                      <label className="flex shrink-0 items-center gap-1.5 text-slate-600">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(p.id)}
+                          onChange={() => toggleSelected(p.id)}
+                          disabled={!isPending(p)}
+                          className="size-4 rounded border-slate-300 text-[#E11D48] focus:ring-[#E11D48] disabled:opacity-50"
+                          aria-label={`Select ${p.name} for bulk collection`}
+                        />
+                        <span className="sr-only">Select for bulk collection</span>
+                      </label>
+                    </div>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-4 text-[0.7rem] text-slate-500">
@@ -503,7 +609,7 @@ export default function DashboardPage() {
                 .map((p) => (
                   <li key={p.id} className="flex items-center justify-between py-2.5">
                     <span className="text-slate-700">
-                      {p.name} – {p.status === "collected" ? "Collected" : "Collected (Behalf)"} – {p.category || "—"}
+                      {p.name} – {p.collectedBy ?? "Collected"} – {p.category || "—"}
                     </span>
                     <span className="text-slate-400">{p.collectedAt ?? "—"}</span>
                   </li>
@@ -552,6 +658,80 @@ export default function DashboardPage() {
           </div>
         </aside>
       </main>
+
+      {/* Bulk collection modal */}
+      {showBulkModal && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 px-4 py-6">
+          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl shadow-slate-900/25">
+            <h2 className="text-base font-semibold text-slate-900">Bulk Collection</h2>
+            <p className="mt-1 text-xs text-slate-500">
+              Mark <span className="font-semibold text-slate-700">{selectedCount}</span> selected participant(s) as collected on behalf. Enter the person collecting the kits.
+            </p>
+            <form
+              className="mt-4 space-y-3 text-sm"
+              onSubmit={handleBulkCollect}
+            >
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-slate-700">Name of person collecting</label>
+                <input
+                  required
+                  value={bulkForm.name}
+                  onChange={(e) => setBulkForm((f) => ({ ...f, name: e.target.value }))}
+                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-rose-300 focus:bg-white focus:ring-2 focus:ring-rose-200"
+                  placeholder="Full name"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-slate-700">Phone number <span className="text-slate-400">(optional)</span></label>
+                <input
+                  value={bulkForm.contact}
+                  onChange={(e) => setBulkForm((f) => ({ ...f, contact: e.target.value }))}
+                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-rose-300 focus:bg-white focus:ring-2 focus:ring-rose-200"
+                  placeholder="+91 ..."
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-slate-700">Relation <span className="text-slate-400">(optional)</span></label>
+                <input
+                  value={bulkForm.relation}
+                  onChange={(e) => setBulkForm((f) => ({ ...f, relation: e.target.value }))}
+                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-rose-300 focus:bg-white focus:ring-2 focus:ring-rose-200"
+                  placeholder="Friend, family, coach..."
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-slate-700">ID proof <span className="text-slate-400">(optional)</span></label>
+                <input
+                  value={bulkForm.idProof}
+                  onChange={(e) => setBulkForm((f) => ({ ...f, idProof: e.target.value }))}
+                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-rose-300 focus:bg-white focus:ring-2 focus:ring-rose-200"
+                  placeholder="e.g. Aadhar last 4 digits"
+                />
+              </div>
+              <div className="mt-3 flex justify-end gap-2 text-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowBulkModal(false);
+                    setBulkForm({ name: "", contact: "", relation: "", idProof: "" });
+                  }}
+                  disabled={bulkCollecting}
+                  className="inline-flex h-8 items-center justify-center rounded-full border border-slate-200 bg-white px-3 font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={bulkCollecting || selectedCount === 0 || !bulkForm.name.trim()}
+                  className="inline-flex h-8 items-center justify-center rounded-full bg-[#E11D48] px-4 font-semibold text-white shadow-sm hover:bg-[#BE123C] disabled:opacity-60"
+                >
+                  {bulkCollecting ? "Marking..." : "Confirm bulk collection"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Collected on behalf modal */}
       {showBehalfModalFor && (

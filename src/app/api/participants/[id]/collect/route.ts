@@ -58,6 +58,7 @@ export async function POST(
         collectionStatus:
           type === "self" ? "Collected" : "Collected_By_Behalf",
         collectedByType: type === "self" ? "Self" : "Behalf",
+        collectionMethod: type === "self" ? "SELF" : "BEHALF",
         collectedByName: type === "behalf" ? behalfName?.trim() : null,
         collectedByContact: type === "behalf" ? behalfContact?.trim() ?? null : null,
         collectedByRelation: type === "behalf" ? behalfRelation?.trim() ?? null : null,
