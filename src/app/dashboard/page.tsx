@@ -4,6 +4,8 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import { ScrollAwareHeader } from "@/components/ui/ScrollAwareHeader";
+
 type ParticipantStatus = "pending" | "collected" | "collected-by-behalf" | "on-spot";
 
 type Participant = {
@@ -60,8 +62,16 @@ export default function DashboardPage() {
   const [bulkCollecting, setBulkCollecting] = React.useState(false);
   const [bulkSuccessMessage, setBulkSuccessMessage] = React.useState<string | null>(null);
   const [eventName, setEventName] = React.useState<string | null>(null);
+  const [volunteerCount, setVolunteerCount] = React.useState<number | null>(null);
 
   const isAdmin = user?.role === "ADMIN";
+
+  const fetchVolunteerCount = React.useCallback(() => {
+    fetch("/api/volunteers/count")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => data != null && setVolunteerCount(data.count))
+      .catch(() => {});
+  }, []);
 
   const isPending = (p: Participant) => p.status === "pending" || p.status === "on-spot";
   const toggleSelected = (id: string) => {
@@ -118,6 +128,21 @@ export default function DashboardPage() {
       .then((data) => setEventName(data?.name ?? null))
       .catch(() => setEventName(null));
   }, [participants]);
+
+  React.useEffect(() => {
+    fetchVolunteerCount();
+  }, [participants, fetchVolunteerCount]);
+
+  React.useEffect(() => {
+    const interval = setInterval(fetchVolunteerCount, 60000);
+    return () => clearInterval(interval);
+  }, [fetchVolunteerCount]);
+
+  React.useEffect(() => {
+    const onFocus = () => fetchVolunteerCount();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [fetchVolunteerCount]);
 
   // Keep selection in sync: remove ids that are no longer pending (e.g. collected elsewhere)
   React.useEffect(() => {
@@ -199,7 +224,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-dvh bg-slate-50 text-slate-900">
       {/* Top nav */}
-      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">
+      <ScrollAwareHeader forceVisible={mobileMenuOpen}>
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-2">
             <span className="grid size-8 place-items-center rounded-xl bg-gradient-to-br from-[#4C1D95] to-[#E11D48] text-xs font-semibold text-white shadow-sm">
@@ -361,9 +386,7 @@ export default function DashboardPage() {
                 <span className="size-1.5 rounded-full bg-emerald-500" />
                 System Status: Online · Synced
               </span>
-              <span>Active Volunteers: 12</span>
-              <span>Expo Day: Day 1</span>
-              <span>Counter: 10K Distribution</span>
+              <span>Active Volunteers: {volunteerCount ?? "—"}</span>
             </div>
             <div className="flex items-center gap-2 text-[0.7rem] text-slate-500">
               <span className="relative inline-flex size-2.5 items-center justify-center">
@@ -374,7 +397,7 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-      </header>
+      </ScrollAwareHeader>
 
       {/* Main content */}
       <main className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6 sm:py-8 lg:flex-row">
@@ -408,11 +431,11 @@ export default function DashboardPage() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search by bib number or name..."
-                className="h-11 w-full flex-1 rounded-full border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 shadow-inner shadow-slate-900/5 outline-none ring-0 placeholder:text-slate-400 focus:border-rose-300 focus:bg-white focus:ring-2 focus:ring-rose-200"
+                className="w-full flex-1 rounded-full border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-inner shadow-slate-900/5 outline-none ring-0 placeholder:text-slate-400 focus:border-rose-300 focus:bg-white focus:ring-2 focus:ring-rose-200 sm:h-11 sm:py-0"
               />
               <button
                 type="submit"
-                className="inline-flex h-11 w-full items-center justify-center rounded-full bg-[#E11D48] px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-[#BE123C] sm:w-auto"
+                className="inline-flex w-full items-center justify-center rounded-full bg-[#E11D48] px-5 py-2.5 text-[0.9rem] font-semibold text-white shadow-sm transition hover:bg-[#BE123C] sm:h-11 sm:w-auto sm:px-6 sm:py-0 sm:text-sm"
               >
                 🔍 Search
               </button>

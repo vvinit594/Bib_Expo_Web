@@ -41,7 +41,7 @@ export async function POST(request: Request) {
 
     if (!volunteer) {
       return NextResponse.json(
-        { error: "Invalid credentials" },
+        { error: "Account not found or has been removed." },
         { status: 401 }
       );
     }

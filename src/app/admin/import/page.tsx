@@ -4,6 +4,8 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import { ScrollAwareHeader } from "@/components/ui/ScrollAwareHeader";
+
 type ImportResult = {
   success: boolean;
   totalRows?: number;
@@ -145,7 +147,7 @@ export default function AdminImportPage() {
 
   return (
     <div className="min-h-dvh bg-slate-50 text-slate-900">
-      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">
+      <ScrollAwareHeader>
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <Link href="/dashboard" className="flex items-center gap-2">
             <span className="grid size-8 place-items-center rounded-xl bg-gradient-to-br from-[#4C1D95] to-[#E11D48] text-xs font-semibold text-white shadow-sm">
@@ -171,7 +173,7 @@ export default function AdminImportPage() {
             </Link>
           </div>
         </div>
-      </header>
+      </ScrollAwareHeader>
 
       <main className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
         {/* Upload section */}

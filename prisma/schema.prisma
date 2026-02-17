@@ -67,7 +67,7 @@ model Participant {
   collectedByVolunteerId String?
   collectedAt            DateTime?
 
-  collectedByVolunteer   Volunteer?        @relation(fields: [collectedByVolunteerId], references: [id])
+  collectedByVolunteer   Volunteer?        @relation(fields: [collectedByVolunteerId], references: [id], onDelete: SetNull)
   expoEvent              ExpoEvent?        @relation(fields: [eventId], references: [id])
   createdAt              DateTime          @default(now())
   updatedAt              DateTime          @updatedAt
