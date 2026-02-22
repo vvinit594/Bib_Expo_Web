@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-server";
+import { sendCollectionEmail } from "@/lib/emailService";
 
 const bulkCollectSchema = z.object({
   participantIds: z.array(z.string().uuid()).min(1, "At least one participant required"),
@@ -11,6 +12,38 @@ const bulkCollectSchema = z.object({
   behalfRelation: z.string().optional(),
   idProof: z.string().optional(),
 });
+
+function queueBulkCollectionEmail(params: {
+  participantId: string;
+  participantName: string;
+  participantEmail: string;
+  bibNumber: number;
+  eventName: string;
+  collectorName: string;
+}) {
+  void (async () => {
+    try {
+      await sendCollectionEmail({
+        participantName: params.participantName,
+        participantEmail: params.participantEmail,
+        bibNumber: params.bibNumber,
+        eventName: params.eventName,
+        collectionType: "BULK",
+        collectorName: params.collectorName,
+      });
+
+      await prisma.participant.update({
+        where: { id: params.participantId },
+        data: {
+          emailSent: true,
+          emailSentAt: new Date(),
+        },
+      });
+    } catch (emailErr) {
+      console.error("Bulk collection email send failed:", emailErr);
+    }
+  })();
+}
 
 export async function POST(request: Request) {
   let auth: Awaited<ReturnType<typeof requireAuth>>;
@@ -51,6 +84,11 @@ export async function POST(request: Request) {
     for (const id of participantIds) {
       const participant = await prisma.participant.findUnique({
         where: { id },
+        include: {
+          expoEvent: {
+            select: { name: true },
+          },
+        },
       });
       if (!participant) {
         skipped += 1;
@@ -73,6 +111,18 @@ export async function POST(request: Request) {
           collectedAt: new Date(),
         },
       });
+
+      if (participant.email && !participant.emailSent) {
+        queueBulkCollectionEmail({
+          participantId: participant.id,
+          participantName: participant.name,
+          participantEmail: participant.email,
+          bibNumber: participant.bibNumber,
+          eventName: participant.expoEvent?.name ?? "Bib Expo",
+          collectorName: behalfName.trim(),
+        });
+      }
+
       updated += 1;
     }
 

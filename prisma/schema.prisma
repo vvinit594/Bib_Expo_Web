@@ -66,6 +66,8 @@ model Participant {
   collectedByRelation    String?
   collectedByVolunteerId String?
   collectedAt            DateTime?
+  emailSent              Boolean           @default(false)
+  emailSentAt            DateTime?
 
   collectedByVolunteer   Volunteer?        @relation(fields: [collectedByVolunteerId], references: [id], onDelete: SetNull)
   expoEvent              ExpoEvent?        @relation(fields: [eventId], references: [id])

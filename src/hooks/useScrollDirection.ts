@@ -12,8 +12,14 @@ const SCROLL_DOWN_HIDE_OFFSET = 60;
  * Uses a threshold to avoid flickering on slow/ambiguous scrolls.
  */
 export function useScrollDirection(): boolean {
-  const [isVisible, setIsVisible] = useState(true);
-  const lastScrollY = useRef(0);
+  const [isVisible, setIsVisible] = useState(
+    typeof window === "undefined"
+      ? true
+      : window.scrollY <= SCROLL_DOWN_HIDE_OFFSET
+  );
+  const lastScrollY = useRef(
+    typeof window === "undefined" ? 0 : window.scrollY
+  );
   const ticking = useRef(false);
 
   const handleScroll = useCallback(() => {
@@ -39,9 +45,6 @@ export function useScrollDirection(): boolean {
 
   useEffect(() => {
     lastScrollY.current = window.scrollY;
-    if (window.scrollY > SCROLL_DOWN_HIDE_OFFSET) {
-      setIsVisible(false);
-    }
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, [handleScroll]);

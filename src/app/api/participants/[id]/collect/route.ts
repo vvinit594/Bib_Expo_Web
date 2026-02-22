@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-server";
+import { sendCollectionEmail } from "@/lib/emailService";
 
 const collectSchema = z.object({
   type: z.enum(["self", "behalf"]),
@@ -10,6 +11,39 @@ const collectSchema = z.object({
   behalfContact: z.string().optional(),
   behalfRelation: z.string().optional(),
 });
+
+function queueCollectionEmail(params: {
+  participantId: string;
+  participantName: string;
+  participantEmail: string;
+  bibNumber: number;
+  eventName: string;
+  collectionType: "SELF" | "BEHALF";
+  collectorName?: string;
+}) {
+  void (async () => {
+    try {
+      await sendCollectionEmail({
+        participantName: params.participantName,
+        participantEmail: params.participantEmail,
+        bibNumber: params.bibNumber,
+        eventName: params.eventName,
+        collectionType: params.collectionType,
+        collectorName: params.collectorName,
+      });
+
+      await prisma.participant.update({
+        where: { id: params.participantId },
+        data: {
+          emailSent: true,
+          emailSentAt: new Date(),
+        },
+      });
+    } catch (emailErr) {
+      console.error("Collection email send failed:", emailErr);
+    }
+  })();
+}
 
 export async function POST(
   request: Request,
@@ -32,6 +66,11 @@ export async function POST(
 
     const participant = await prisma.participant.findUnique({
       where: { id },
+      include: {
+        expoEvent: {
+          select: { name: true },
+        },
+      },
     });
 
     if (!participant) {
@@ -66,6 +105,18 @@ export async function POST(
         collectedAt: new Date(),
       },
     });
+
+    if (participant.email && !participant.emailSent) {
+      queueCollectionEmail({
+        participantId: participant.id,
+        participantName: participant.name,
+        participantEmail: participant.email,
+        bibNumber: participant.bibNumber,
+        eventName: participant.expoEvent?.name ?? "Bib Expo",
+        collectionType: type === "self" ? "SELF" : "BEHALF",
+        collectorName: type === "self" ? undefined : behalfName?.trim(),
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch (err) {
