@@ -169,19 +169,6 @@ export default function DashboardPage() {
     return () => window.removeEventListener("focus", onFocus);
   }, [fetchVolunteerCount]);
 
-  // Keep selection in sync: remove ids that are no longer pending (e.g. collected elsewhere)
-  React.useEffect(() => {
-    if (selectedIds.size === 0) return;
-    const pendingIds = new Set(participants.filter(isPending).map((p) => p.id));
-    setSelectedIds((prev) => {
-      const next = new Set<string>();
-      prev.forEach((id) => {
-        if (pendingIds.has(id)) next.add(id);
-      });
-      return next.size === prev.size ? prev : next;
-    });
-  }, [participants]);
-
   async function handleMarkCollected(p: Participant, type: "self" | "behalf", extra?: { name: string; contact: string; relation: string }) {
     if (collectingId) return;
     setCollectingId(p.id);
@@ -511,6 +498,15 @@ export default function DashboardPage() {
                 >
                   🔴 Bulk Collection{selectedCount > 0 ? ` (${selectedCount})` : ""}
                 </button>
+                {selectedCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedIds(new Set())}
+                    className="inline-flex h-9 items-center justify-center rounded-full border border-slate-200 bg-white px-3 text-[0.75rem] font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+                  >
+                    Clear Selection
+                  </button>
+                )}
                 <button className="hidden text-[0.7rem] font-medium text-slate-600 underline-offset-2 hover:underline sm:inline">
                   Advanced filters (coming soon)
                 </button>
