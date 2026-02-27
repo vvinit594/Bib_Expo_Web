@@ -4,7 +4,7 @@ import { verifyToken, AUTH_COOKIE_NAME } from "./auth";
 
 export type AuthUser = {
   id: string;
-  email: string;
+  phone: string;
   role: string;
   counterName: string | null;
 };

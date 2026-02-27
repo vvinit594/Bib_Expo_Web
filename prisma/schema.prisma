@@ -81,7 +81,7 @@ model Participant {
 model Volunteer {
   id           String        @id @default(uuid())
   name         String
-  email        String        @unique
+  phone        String        @unique
   password     String
   counterName  String?
   role         Role          @default(VOLUNTEER)

@@ -19,7 +19,7 @@ export async function GET() {
       select: {
         id: true,
         name: true,
-        email: true,
+        phone: true,
         counterName: true,
         createdAt: true,
         role: true,
@@ -29,7 +29,7 @@ export async function GET() {
     const list = volunteers.map((v) => ({
       id: v.id,
       name: v.name,
-      email: v.email,
+      phone: v.phone,
       counterName: v.counterName ?? "—",
       createdAt: v.createdAt.toISOString(),
       status: "Active",

@@ -10,7 +10,7 @@ const ADMIN_PATHS = ["/admin"];
 
 type Payload = {
   id: string;
-  email: string;
+  phone: string;
   role: string;
   counterName: string | null;
 };
@@ -21,7 +21,7 @@ async function verifyTokenEdge(token: string): Promise<Payload | null> {
     const { payload } = await jwtVerify(token, secret);
     return {
       id: payload.id as string,
-      email: payload.email as string,
+      phone: payload.phone as string,
       role: (payload.role as string) ?? "VOLUNTEER",
       counterName: (payload.counterName as string) ?? null,
     };

@@ -7,7 +7,7 @@ import { requireAdmin } from "@/lib/auth-server";
 
 const createVolunteerSchema = z.object({
   name: z.string().min(1, "Username is required"),
-  email: z.string().email("Invalid email"),
+  phone: z.string().regex(/^[6-9]\d{9}$/, "Phone number must be a valid 10-digit Indian mobile number"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   counterName: z.string().min(1, "Counter name is required"),
 });
@@ -30,17 +30,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: msg }, { status: 400 });
     }
 
-    const { name, email, password, counterName } = parsed.data;
-    const normalizedEmail = email.trim().toLowerCase();
+    const { name, phone, password, counterName } = parsed.data;
+    const normalizedPhone = phone.trim();
 
     const existing = await prisma.volunteer.findUnique({
-      where: { email: normalizedEmail },
+      where: { phone: normalizedPhone },
     });
 
     if (existing) {
       return NextResponse.json(
-        { error: "Volunteer with this email already exists" },
+        { error: "Volunteer with this phone number already exists" },
         { status: 409 }
+      );
+    }
+
+    if (!/^[6-9]\d{9}$/.test(normalizedPhone)) {
+      return NextResponse.json(
+        { error: "Phone number must be a valid 10-digit Indian mobile number" },
+        { status: 400 }
       );
     }
 
@@ -49,7 +56,7 @@ export async function POST(request: Request) {
     await prisma.volunteer.create({
       data: {
         name: name.trim(),
-        email: normalizedEmail,
+        phone: normalizedPhone,
         password: passwordHash,
         role: "VOLUNTEER",
         counterName: counterName.trim(),

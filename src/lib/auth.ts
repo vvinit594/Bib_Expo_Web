@@ -6,7 +6,7 @@ export const AUTH_COOKIE_NAME = "auth_token";
 
 export type JwtPayload = {
   id: string;
-  email: string;
+  phone: string;
   role: string;
   counterName: string | null;
 };

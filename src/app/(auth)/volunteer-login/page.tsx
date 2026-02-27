@@ -19,11 +19,16 @@ function VolunteerLoginForm() {
     setError(null);
 
     const fd = new FormData(e.currentTarget);
-    const email = String(fd.get("email") ?? "").trim();
+    const phone = String(fd.get("phone") ?? "").trim();
     const password = String(fd.get("password") ?? "");
 
-    if (!email || !password) {
-      setError("Email and password are required.");
+    if (!phone || !password) {
+      setError("Phone number and password are required.");
+      return;
+    }
+
+    if (!/^[6-9]\d{9}$/.test(phone)) {
+      setError("Enter a valid 10-digit Indian mobile number.");
       return;
     }
 
@@ -32,7 +37,7 @@ function VolunteerLoginForm() {
       const res = await fetch("/api/auth/volunteer-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ phone, password }),
       });
 
       const data = await res.json();
@@ -66,11 +71,11 @@ function VolunteerLoginForm() {
 
       <form onSubmit={onSubmit} className="mt-12 space-y-5">
         <AuthInput
-          name="email"
-          label="Email"
-          placeholder="name@company.com"
-          type="email"
-          autoComplete="email"
+          name="phone"
+          label="Phone Number"
+          placeholder="10-digit mobile number"
+          type="tel"
+          autoComplete="tel"
           required
         />
         <AuthInput

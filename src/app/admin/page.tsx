@@ -9,7 +9,7 @@ import { ScrollAwareHeader } from "@/components/ui/ScrollAwareHeader";
 type Volunteer = {
   id: string;
   name: string;
-  email: string;
+  phone: string;
   counterName: string;
   createdAt: string;
   status: string;
@@ -18,7 +18,7 @@ type Volunteer = {
 export default function AdminPage() {
   const router = useRouter();
   const [name, setName] = React.useState("");
-  const [email, setEmail] = React.useState("");
+  const [phone, setPhone] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [counterName, setCounterName] = React.useState("");
   const [loading, setLoading] = React.useState(false);
@@ -53,7 +53,7 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: name.trim(),
-          email: email.trim(),
+          phone: phone.trim(),
           password: password,
           counterName: counterName.trim(),
         }),
@@ -68,7 +68,7 @@ export default function AdminPage() {
 
       setShowSuccessPopup(true);
       setName("");
-      setEmail("");
+      setPhone("");
       setPassword("");
       setCounterName("");
       fetchVolunteers();
@@ -158,17 +158,19 @@ export default function AdminPage() {
               />
             </div>
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-700">
-                Email
+              <label htmlFor="phone" className="block text-sm font-medium text-slate-700">
+                Phone Number
               </label>
               <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="volunteer@example.com"
+                id="phone"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                placeholder="10-digit mobile number"
                 className="mt-1 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-200"
                 required
+                pattern="[6-9][0-9]{9}"
+                maxLength={10}
               />
             </div>
             <div>
@@ -233,7 +235,7 @@ export default function AdminPage() {
                   <thead>
                     <tr className="border-b border-slate-200 text-slate-600">
                       <th className="pb-3 pr-4 font-medium">Username</th>
-                      <th className="pb-3 pr-4 font-medium">Email</th>
+                      <th className="pb-3 pr-4 font-medium">Phone Number</th>
                       <th className="pb-3 pr-4 font-medium">Counter No./Name</th>
                       <th className="pb-3 pr-4 font-medium">Created</th>
                       <th className="pb-3 pr-4 font-medium">Status</th>
@@ -244,7 +246,7 @@ export default function AdminPage() {
                     {volunteers.map((v) => (
                       <tr key={v.id} className="border-b border-slate-100">
                         <td className="py-3 pr-4 font-medium text-slate-900">{v.name}</td>
-                        <td className="py-3 pr-4 text-slate-600">{v.email}</td>
+                        <td className="py-3 pr-4 text-slate-600">{v.phone}</td>
                         <td className="py-3 pr-4 text-slate-600">{v.counterName}</td>
                         <td className="py-3 pr-4 text-slate-500">
                           {new Date(v.createdAt).toLocaleDateString()}
@@ -282,7 +284,7 @@ export default function AdminPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <p className="font-medium text-slate-900">{v.name}</p>
-                        <p className="mt-0.5 text-xs text-slate-600">{v.email}</p>
+                        <p className="mt-0.5 text-xs text-slate-600">{v.phone}</p>
                         <p className="mt-1 text-xs text-slate-500">
                           {v.counterName} · {new Date(v.createdAt).toLocaleDateString()}
                         </p>
@@ -329,7 +331,7 @@ export default function AdminPage() {
                 Are you sure you want to delete this volunteer?
               </p>
               <p className="mt-1 text-center text-sm text-slate-500">
-                {deleteConfirmFor.name} ({deleteConfirmFor.email}) will lose access immediately.
+                {deleteConfirmFor.name} ({deleteConfirmFor.phone}) will lose access immediately.
               </p>
               {error && (
                 <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>

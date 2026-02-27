@@ -6,7 +6,7 @@ import { prisma } from "@/lib/db";
 import { signToken, AUTH_COOKIE_NAME } from "@/lib/auth";
 
 const loginSchema = z.object({
-  email: z.string().email("Invalid email"),
+  phone: z.string().regex(/^[6-9]\d{9}$/, "Invalid phone number"),
   password: z.string().min(1, "Password is required"),
 });
 
@@ -32,11 +32,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: msg }, { status: 400 });
     }
 
-    const { email, password } = parsed.data;
-    const normalizedEmail = email.trim().toLowerCase();
+    const { phone, password } = parsed.data;
+    const normalizedPhone = phone.trim();
 
     const volunteer = await prisma.volunteer.findUnique({
-      where: { email: normalizedEmail },
+      where: { phone: normalizedPhone },
     });
 
     if (!volunteer) {
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
 
     const token = signToken({
       id: volunteer.id,
-      email: volunteer.email,
+      phone: volunteer.phone,
       role: volunteer.role,
       counterName: volunteer.counterName,
     });
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
       user: {
         id: volunteer.id,
         name: volunteer.name,
-        email: volunteer.email,
+        phone: volunteer.phone,
         role: volunteer.role,
         counterName: volunteer.counterName,
       },

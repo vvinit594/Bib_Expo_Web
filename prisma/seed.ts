@@ -9,16 +9,16 @@ if (!url) throw new Error("DATABASE_URL is not set");
 const adapter = new PrismaPg({ connectionString: url });
 const prisma = new PrismaClient({ adapter });
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@bibexpo.com";
+const ADMIN_PHONE = process.env.ADMIN_PHONE ?? "9987688443";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "admin123";
 
 async function main() {
   const existing = await prisma.volunteer.findUnique({
-    where: { email: ADMIN_EMAIL },
+    where: { phone: ADMIN_PHONE },
   });
 
   if (existing) {
-    console.log("Admin user already exists:", ADMIN_EMAIL);
+    console.log("Admin user already exists:", ADMIN_PHONE);
     return;
   }
 
@@ -27,14 +27,14 @@ async function main() {
   await prisma.volunteer.create({
     data: {
       name: "Super Admin",
-      email: ADMIN_EMAIL,
+      phone: ADMIN_PHONE,
       password: passwordHash,
       role: "ADMIN",
     },
   });
 
   console.log("Admin user created successfully:");
-  console.log("  Email:", ADMIN_EMAIL);
+  console.log("  Phone:", ADMIN_PHONE);
   console.log("  Password:", ADMIN_PASSWORD);
   console.log("\n⚠ Change the password after first login in production!");
 }
