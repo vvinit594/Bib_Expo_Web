@@ -88,3 +88,15 @@ model Volunteer {
   createdAt    DateTime      @default(now())
   participants Participant[]
 }
+
+model CollectionRevertLog {
+  id                  String   @id @default(uuid())
+  participantId       String
+  participantName     String
+  participantCategory String?
+  revertedBy          String
+  createdAt           DateTime @default(now())
+
+  @@index([participantId])
+  @@index([createdAt])
+}

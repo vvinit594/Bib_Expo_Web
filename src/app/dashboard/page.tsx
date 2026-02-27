@@ -31,6 +31,12 @@ type AuthUser = {
   counterName: string | null;
 };
 
+type ActivityItem = {
+  id: string;
+  text: string;
+  time: string;
+};
+
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = React.useState<AuthUser | null>(null);
@@ -40,6 +46,7 @@ export default function DashboardPage() {
   const [showBehalfModalFor, setShowBehalfModalFor] = React.useState<Participant | null>(null);
   const [showOnSpotModal, setShowOnSpotModal] = React.useState(false);
   const [collectingId, setCollectingId] = React.useState<string | null>(null);
+  const [undoingId, setUndoingId] = React.useState<string | null>(null);
   const [stats, setStats] = React.useState<{
     total: number;
     collected: number;
@@ -63,6 +70,7 @@ export default function DashboardPage() {
   const [bulkSuccessMessage, setBulkSuccessMessage] = React.useState<string | null>(null);
   const [eventName, setEventName] = React.useState<string | null>(null);
   const [volunteerCount, setVolunteerCount] = React.useState<number | null>(null);
+  const [activities, setActivities] = React.useState<ActivityItem[]>([]);
 
   const isAdmin = user?.role === "ADMIN";
 
@@ -71,6 +79,19 @@ export default function DashboardPage() {
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => data != null && setVolunteerCount(data.count))
       .catch(() => {});
+  }, []);
+
+  const fetchActivities = React.useCallback(() => {
+    fetch("/api/participants/activity")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (Array.isArray(data?.activities)) {
+          setActivities(data.activities);
+        } else {
+          setActivities([]);
+        }
+      })
+      .catch(() => setActivities([]));
   }, []);
 
   const isPending = (p: Participant) => p.status === "pending" || p.status === "on-spot";
@@ -132,6 +153,10 @@ export default function DashboardPage() {
   React.useEffect(() => {
     fetchVolunteerCount();
   }, [participants, fetchVolunteerCount]);
+
+  React.useEffect(() => {
+    fetchActivities();
+  }, [participants, fetchActivities]);
 
   React.useEffect(() => {
     const interval = setInterval(fetchVolunteerCount, 60000);
@@ -212,6 +237,26 @@ export default function DashboardPage() {
       setBulkSuccessMessage("Bulk collection failed. Please try again.");
     } finally {
       setBulkCollecting(false);
+    }
+  }
+
+  async function handleUndoCollection(p: Participant) {
+    if (undoingId) return;
+    setUndoingId(p.id);
+    try {
+      const res = await fetch(`/api/participants/${p.id}/undo-collect`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (res.ok) {
+        fetchParticipants();
+      } else {
+        setBulkSuccessMessage(data.error ?? "Undo failed.");
+      }
+    } catch {
+      setBulkSuccessMessage("Undo failed. Please try again.");
+    } finally {
+      setUndoingId(null);
     }
   }
 
@@ -586,12 +631,22 @@ export default function DashboardPage() {
                         </>
                       )}
                       {(p.status === "collected" || p.status === "collected-by-behalf") && (
-                        <button
-                          disabled
-                          className="inline-flex items-center justify-center rounded-full bg-emerald-50 px-3.5 py-1.5 text-[0.7rem] font-semibold text-emerald-700 ring-1 ring-emerald-100"
-                        >
-                          ✅ Already Collected
-                        </button>
+                        <>
+                          <button
+                            disabled
+                            className="inline-flex items-center justify-center rounded-full bg-emerald-50 px-3.5 py-1.5 text-[0.7rem] font-semibold text-emerald-700 ring-1 ring-emerald-100"
+                          >
+                            ✅ Already Collected
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleUndoCollection(p)}
+                            disabled={undoingId === p.id}
+                            className="inline-flex items-center justify-center rounded-full border border-amber-200 bg-amber-50 px-3.5 py-1.5 text-[0.7rem] font-semibold text-amber-700 shadow-sm transition hover:bg-amber-100 disabled:opacity-60"
+                          >
+                            {undoingId === p.id ? "Undoing..." : "Undo Collection"}
+                          </button>
+                        </>
                       )}
                       {p.status === "on-spot" && (
                         <button
@@ -626,18 +681,13 @@ export default function DashboardPage() {
               <span className="text-[0.7rem] text-slate-500">Last 20 actions</span>
             </div>
             <ul className="divide-y divide-slate-100 text-[0.75rem]">
-              {participants
-                .filter((p) => p.status !== "pending")
-                .slice(0, 20)
-                .map((p) => (
-                  <li key={p.id} className="flex items-center justify-between py-2.5">
-                    <span className="text-slate-700">
-                      {p.name} – {p.collectedBy ?? "Collected"} – {p.category || "—"}
-                    </span>
-                    <span className="text-slate-400">{p.collectedAt ?? "—"}</span>
-                  </li>
-                ))}
-              {participants.filter((p) => p.status !== "pending").length === 0 && (
+              {activities.map((a) => (
+                <li key={a.id} className="flex items-center justify-between py-2.5">
+                  <span className="text-slate-700">{a.text}</span>
+                  <span className="text-slate-400">{a.time}</span>
+                </li>
+              ))}
+              {activities.length === 0 && (
                 <li className="py-4 text-center text-slate-500">No collection activity yet</li>
               )}
             </ul>
