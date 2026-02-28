@@ -61,7 +61,7 @@ function VolunteerLoginForm() {
     <AuthCard>
       <div>
         <p className="text-sm font-semibold tracking-wide text-[color:var(--muted-foreground)]">
-          Volunteer Access
+          Organizer / Volunteer Access
         </p>
         <h2 className="mt-2 text-2xl font-semibold">Login</h2>
         <p className="mt-2 text-sm text-[color:var(--muted-foreground)]">

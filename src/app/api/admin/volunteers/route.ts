@@ -14,7 +14,7 @@ export async function GET() {
 
   try {
     const volunteers = await prisma.volunteer.findMany({
-      where: { role: "VOLUNTEER" },
+      where: { role: { in: ["VOLUNTEER", "ORGANIZER"] } },
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -23,6 +23,10 @@ export async function GET() {
         counterName: true,
         createdAt: true,
         role: true,
+        eventId: true,
+        expoEvent: {
+          select: { name: true },
+        },
       },
     });
 
@@ -30,6 +34,9 @@ export async function GET() {
       id: v.id,
       name: v.name,
       phone: v.phone,
+      role: v.role,
+      eventId: v.eventId ?? null,
+      eventName: v.expoEvent?.name ?? "—",
       counterName: v.counterName ?? "—",
       createdAt: v.createdAt.toISOString(),
       status: "Active",

@@ -15,6 +15,7 @@ datasource db {
 
 enum Role {
   ADMIN
+  ORGANIZER
   VOLUNTEER
 }
 
@@ -39,6 +40,7 @@ model ExpoEvent {
   name         String
   createdAt    DateTime      @default(now())
   participants Participant[]
+  users        Volunteer[]
 }
 
 model Participant {
@@ -85,18 +87,24 @@ model Volunteer {
   password     String
   counterName  String?
   role         Role          @default(VOLUNTEER)
+  eventId      String?
   createdAt    DateTime      @default(now())
   participants Participant[]
+  expoEvent    ExpoEvent?    @relation(fields: [eventId], references: [id])
+
+  @@index([eventId])
 }
 
 model CollectionRevertLog {
   id                  String   @id @default(uuid())
   participantId       String
+  eventId             String?
   participantName     String
   participantCategory String?
   revertedBy          String
   createdAt           DateTime @default(now())
 
   @@index([participantId])
+  @@index([eventId])
   @@index([createdAt])
 }

@@ -13,6 +13,7 @@ type Payload = {
   phone: string;
   role: string;
   counterName: string | null;
+  eventId: string | null;
 };
 
 async function verifyTokenEdge(token: string): Promise<Payload | null> {
@@ -24,6 +25,7 @@ async function verifyTokenEdge(token: string): Promise<Payload | null> {
       phone: payload.phone as string,
       role: (payload.role as string) ?? "VOLUNTEER",
       counterName: (payload.counterName as string) ?? null,
+      eventId: (payload.eventId as string) ?? null,
     };
   } catch {
     return null;
@@ -49,7 +51,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Dashboard: ADMIN + VOLUNTEER
+  // Dashboard: ADMIN + ORGANIZER + VOLUNTEER
   if (DASHBOARD_PATHS.some((p) => pathname.startsWith(p))) {
     if (!payload) {
       const loginUrl = new URL("/login", request.url);

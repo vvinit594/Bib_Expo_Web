@@ -23,9 +23,9 @@ export async function DELETE(
       where: { id },
     });
 
-    if (!volunteer || volunteer.role !== "VOLUNTEER") {
+    if (!volunteer || volunteer.role === "ADMIN") {
       return NextResponse.json(
-        { error: "Volunteer not found" },
+        { error: "User not found" },
         { status: 404 }
       );
     }

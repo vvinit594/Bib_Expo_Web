@@ -11,7 +11,7 @@ export async function GET() {
 
   const volunteer = await prisma.volunteer.findUnique({
     where: { id: auth.id },
-    select: { id: true, name: true, phone: true, role: true, counterName: true },
+    select: { id: true, name: true, phone: true, role: true, counterName: true, eventId: true },
   });
 
   if (!volunteer) {
@@ -25,6 +25,7 @@ export async function GET() {
       phone: volunteer.phone,
       role: volunteer.role,
       counterName: volunteer.counterName,
+      eventId: volunteer.eventId ?? null,
     },
   });
 }

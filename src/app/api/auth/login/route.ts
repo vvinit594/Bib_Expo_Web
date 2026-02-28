@@ -3,7 +3,7 @@ import bcrypt from "bcrypt";
 import { z } from "zod";
 
 import { prisma } from "@/lib/db";
-import { signToken, AUTH_COOKIE_NAME } from "@/lib/auth";
+import { signToken, AUTH_COOKIE_NAME, ACTIVE_EVENT_COOKIE_NAME } from "@/lib/auth";
 
 const loginSchema = z.object({
   phone: z.string().regex(/^[6-9]\d{9}$/, "Invalid phone number"),
@@ -18,6 +18,16 @@ function setAuthCookie(response: NextResponse, token: string) {
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
     maxAge: COOKIE_MAX_AGE,
+    path: "/",
+  });
+}
+
+function clearActiveEventCookie(response: NextResponse) {
+  response.cookies.set(ACTIVE_EVENT_COOKIE_NAME, "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 0,
     path: "/",
   });
 }
@@ -68,6 +78,7 @@ export async function POST(request: Request) {
       phone: volunteer.phone,
       role: volunteer.role,
       counterName: volunteer.counterName,
+      eventId: volunteer.eventId ?? null,
     });
 
     const response = NextResponse.json({
@@ -79,10 +90,12 @@ export async function POST(request: Request) {
         phone: volunteer.phone,
         role: volunteer.role,
         counterName: volunteer.counterName,
+        eventId: volunteer.eventId ?? null,
       },
     });
 
     setAuthCookie(response, token);
+    clearActiveEventCookie(response);
 
     return response;
   } catch (err) {

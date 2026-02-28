@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import * as XLSX from "xlsx";
 
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth-server";
+import { ACTIVE_EVENT_COOKIE_NAME } from "@/lib/auth";
 
 export async function GET() {
   try {
@@ -14,7 +16,17 @@ export async function GET() {
   }
 
   try {
+    const cookieStore = await cookies();
+    const activeEventId = cookieStore.get(ACTIVE_EVENT_COOKIE_NAME)?.value ?? null;
+    if (!activeEventId) {
+      return NextResponse.json(
+        { error: "Select an active event before exporting" },
+        { status: 400 }
+      );
+    }
+
     const participants = await prisma.participant.findMany({
+      where: { eventId: activeEventId },
       orderBy: { bibNumber: "asc" },
       include: {
         collectedByVolunteer: {

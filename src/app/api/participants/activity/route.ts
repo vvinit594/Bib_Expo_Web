@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 import { prisma } from "@/lib/db";
 import { getAuthUser } from "@/lib/auth-server";
+import { ACTIVE_EVENT_COOKIE_NAME } from "@/lib/auth";
 
 type ActivityItem = {
   id: string;
@@ -11,8 +13,9 @@ type ActivityItem = {
 };
 
 export async function GET() {
+  let auth;
   try {
-    const auth = await getAuthUser();
+    auth = await getAuthUser();
     if (!auth) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -21,9 +24,20 @@ export async function GET() {
   }
 
   try {
+    if (auth.role !== "ADMIN" && !auth.eventId) {
+      return NextResponse.json({ error: "Event assignment required" }, { status: 403 });
+    }
+    const cookieStore = await cookies();
+    const adminEventId = cookieStore.get(ACTIVE_EVENT_COOKIE_NAME)?.value ?? null;
+    const eventFilter =
+      auth.role === "ADMIN"
+        ? adminEventId ? { eventId: adminEventId } : {}
+        : { eventId: auth.eventId };
+
     const [collectedRows, revertedRows] = await Promise.all([
       prisma.participant.findMany({
         where: {
+          ...eventFilter,
           NOT: { collectionStatus: "Pending" },
           collectedAt: { not: null },
         },
@@ -39,6 +53,7 @@ export async function GET() {
         },
       }),
       prisma.collectionRevertLog.findMany({
+        where: eventFilter,
         orderBy: { createdAt: "desc" },
         take: 40,
         select: {

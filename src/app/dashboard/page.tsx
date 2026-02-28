@@ -35,12 +35,18 @@ type AuthUser = {
   phone: string;
   role: string;
   counterName: string | null;
+  eventId: string | null;
 };
 
 type ActivityItem = {
   id: string;
   text: string;
   time: string;
+};
+
+type EventItem = {
+  id: string;
+  name: string;
 };
 
 export default function DashboardPage() {
@@ -76,6 +82,9 @@ export default function DashboardPage() {
   const [bulkCollecting, setBulkCollecting] = React.useState(false);
   const [bulkSuccessMessage, setBulkSuccessMessage] = React.useState<string | null>(null);
   const [eventName, setEventName] = React.useState<string | null>(null);
+  const [events, setEvents] = React.useState<EventItem[]>([]);
+  const [activeEventId, setActiveEventId] = React.useState<string>("");
+  const [switchingEvent, setSwitchingEvent] = React.useState(false);
   const [volunteerCount, setVolunteerCount] = React.useState<number | null>(null);
   const [activities, setActivities] = React.useState<ActivityItem[]>([]);
 
@@ -100,6 +109,22 @@ export default function DashboardPage() {
       })
       .catch(() => setActivities([]));
   }, []);
+
+  const fetchEvents = React.useCallback(() => {
+    if (!isAdmin) return;
+    fetch("/api/admin/events")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        const list = Array.isArray(data?.events) ? data.events : [];
+        setEvents(list);
+        if (data?.activeEventId) setActiveEventId(data.activeEventId);
+        else if (list[0]?.id) setActiveEventId(list[0].id);
+      })
+      .catch(() => {
+        setEvents([]);
+        setActiveEventId("");
+      });
+  }, [isAdmin]);
 
   const isPending = (p: Participant) => p.status === "pending" || p.status === "on-spot";
   const toggleSelected = (id: string) => {
@@ -160,6 +185,10 @@ export default function DashboardPage() {
   React.useEffect(() => {
     fetchVolunteerCount();
   }, [participants, fetchVolunteerCount]);
+
+  React.useEffect(() => {
+    fetchEvents();
+  }, [fetchEvents]);
 
   React.useEffect(() => {
     fetchActivities();
@@ -255,6 +284,27 @@ export default function DashboardPage() {
     }
   }
 
+  async function handleSwitchEvent(nextEventId: string) {
+    if (!isAdmin) return;
+    setActiveEventId(nextEventId);
+    if (!nextEventId) return;
+    setSwitchingEvent(true);
+    try {
+      const res = await fetch("/api/admin/events/active", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId: nextEventId }),
+      });
+      if (res.ok) {
+        fetchParticipants();
+        fetchVolunteerCount();
+        fetchActivities();
+      }
+    } finally {
+      setSwitchingEvent(false);
+    }
+  }
+
   const filtered = participants;
 
   function handleSearchSubmit(e: React.FormEvent) {
@@ -273,7 +323,7 @@ export default function DashboardPage() {
             <div className="flex flex-col">
               <span className="text-sm font-semibold">Bib Expo</span>
               <span className="text-[0.7rem] text-slate-500">
-                {isAdmin ? "Admin Dashboard" : "Volunteer Dashboard"}
+                {isAdmin ? "Admin Dashboard" : user?.role === "ORGANIZER" ? "Organizer Dashboard" : "Volunteer Dashboard"}
               </span>
             </div>
           </div>
@@ -283,6 +333,21 @@ export default function DashboardPage() {
               <span className="size-2 rounded-full bg-emerald-500" />
               <span>{eventName ?? "No Active Event"}</span>
             </span>
+            {isAdmin && (
+              <select
+                value={activeEventId}
+                onChange={(e) => handleSwitchEvent(e.target.value)}
+                disabled={switchingEvent || events.length === 0}
+                className="h-9 rounded-full border border-slate-200 bg-white px-3 text-xs text-slate-700 shadow-sm outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-200 disabled:opacity-60"
+              >
+                <option value="">Switch Event</option>
+                {events.map((ev) => (
+                  <option key={ev.id} value={ev.id}>
+                    {ev.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div className="flex items-center gap-3">
@@ -312,7 +377,7 @@ export default function DashboardPage() {
                   {user?.counterName ?? "Counter 4 – 10K"}
                 </span>
                 <span className="text-[0.7rem] text-slate-500">
-                  {isAdmin ? "Admin" : "Volunteer"}: {user?.name ?? "—"}
+                  {isAdmin ? "Admin" : user?.role === "ORGANIZER" ? "Organizer" : "Volunteer"}: {user?.name ?? "—"}
                 </span>
               </div>
               <span className="grid size-8 place-items-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700">
@@ -355,11 +420,26 @@ export default function DashboardPage() {
                       <p className="text-xs font-medium text-slate-900">
                         {eventName ?? "No Active Event"}
                       </p>
+                      {isAdmin && (
+                        <select
+                          value={activeEventId}
+                          onChange={(e) => handleSwitchEvent(e.target.value)}
+                          disabled={switchingEvent || events.length === 0}
+                          className="mt-2 h-8 w-full rounded-lg border border-slate-200 bg-white px-2 text-[0.7rem] text-slate-700 outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-200"
+                        >
+                          <option value="">Switch Event</option>
+                          {events.map((ev) => (
+                            <option key={ev.id} value={ev.id}>
+                              {ev.name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                       <p className="text-[0.7rem] text-slate-500">
                         {user?.counterName ?? "Counter 4 – 10K"}
                       </p>
                       <p className="text-[0.7rem] text-slate-500">
-                        {isAdmin ? "Admin" : "Volunteer"}: {user?.name ?? "—"}
+                        {isAdmin ? "Admin" : user?.role === "ORGANIZER" ? "Organizer" : "Volunteer"}: {user?.name ?? "—"}
                       </p>
                     </div>
                     {isAdmin && (

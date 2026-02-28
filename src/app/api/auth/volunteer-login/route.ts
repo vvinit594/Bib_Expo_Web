@@ -3,7 +3,7 @@ import bcrypt from "bcrypt";
 import { z } from "zod";
 
 import { prisma } from "@/lib/db";
-import { signToken, AUTH_COOKIE_NAME } from "@/lib/auth";
+import { signToken, AUTH_COOKIE_NAME, ACTIVE_EVENT_COOKIE_NAME } from "@/lib/auth";
 
 const loginSchema = z.object({
   phone: z.string().regex(/^[6-9]\d{9}$/, "Invalid phone number"),
@@ -14,6 +14,26 @@ const COOKIE_MAX_AGE = 8 * 60 * 60; // 8 hours
 
 function setAuthCookie(response: NextResponse, token: string) {
   response.cookies.set(AUTH_COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: COOKIE_MAX_AGE,
+    path: "/",
+  });
+}
+
+function setActiveEventCookie(response: NextResponse, eventId: string | null) {
+  if (!eventId) {
+    response.cookies.set(ACTIVE_EVENT_COOKIE_NAME, "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 0,
+      path: "/",
+    });
+    return;
+  }
+  response.cookies.set(ACTIVE_EVENT_COOKIE_NAME, eventId, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
@@ -55,8 +75,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Volunteer login only — admins must use /login
-    if (volunteer.role !== "VOLUNTEER") {
+    // Volunteer/Organizer login only — admins must use /login
+    if (volunteer.role !== "VOLUNTEER" && volunteer.role !== "ORGANIZER") {
       return NextResponse.json(
         { error: "Use the admin login page to sign in." },
         { status: 403 }
@@ -68,6 +88,7 @@ export async function POST(request: Request) {
       phone: volunteer.phone,
       role: volunteer.role,
       counterName: volunteer.counterName,
+      eventId: volunteer.eventId ?? null,
     });
 
     const response = NextResponse.json({
@@ -79,10 +100,12 @@ export async function POST(request: Request) {
         phone: volunteer.phone,
         role: volunteer.role,
         counterName: volunteer.counterName,
+        eventId: volunteer.eventId ?? null,
       },
     });
 
     setAuthCookie(response, token);
+    setActiveEventCookie(response, volunteer.eventId ?? null);
 
     return response;
   } catch (err) {

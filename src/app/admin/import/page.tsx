@@ -16,9 +16,15 @@ type ImportResult = {
   error?: string;
 };
 
+type EventItem = {
+  id: string;
+  name: string;
+};
+
 export default function AdminImportPage() {
   const router = useRouter();
-  const [eventName, setEventName] = React.useState("");
+  const [events, setEvents] = React.useState<EventItem[]>([]);
+  const [activeEventId, setActiveEventId] = React.useState("");
   const [file, setFile] = React.useState<File | null>(null);
   const [uploading, setUploading] = React.useState(false);
   const [result, setResult] = React.useState<ImportResult | null>(null);
@@ -29,6 +35,32 @@ export default function AdminImportPage() {
   const [participantCount, setParticipantCount] = React.useState<number | null>(null);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    fetch("/api/admin/events")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        const list = Array.isArray(data?.events) ? data.events : [];
+        setEvents(list);
+        if (data?.activeEventId) setActiveEventId(data.activeEventId);
+        else if (list[0]?.id) setActiveEventId(list[0].id);
+      })
+      .catch(() => {
+        setEvents([]);
+        setActiveEventId("");
+      });
+  }, []);
+
+  async function handleSelectEvent(nextEventId: string) {
+    setActiveEventId(nextEventId);
+    if (!nextEventId) return;
+    await fetch("/api/admin/events/active", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventId: nextEventId }),
+    });
+    router.refresh();
+  }
 
   React.useEffect(() => {
     fetch("/api/participants/count")
@@ -62,8 +94,8 @@ export default function AdminImportPage() {
 
   async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
-    if (!eventName.trim()) {
-      setError("Event name is required");
+    if (!activeEventId) {
+      setError("Please select an event first");
       return;
     }
     if (!file) {
@@ -76,7 +108,7 @@ export default function AdminImportPage() {
 
     try {
       const formData = new FormData();
-      formData.append("eventName", eventName.trim());
+      formData.append("eventId", activeEventId);
       formData.append("file", file);
 
       const res = await fetch("/api/admin/import-excel", {
@@ -185,18 +217,23 @@ export default function AdminImportPage() {
 
           <form onSubmit={handleUpload} className="mt-6 space-y-4">
             <div className="space-y-1">
-              <label htmlFor="eventName" className="block text-sm font-medium text-slate-700">
-                Event Name <span className="text-red-500">*</span>
+              <label htmlFor="eventId" className="block text-sm font-medium text-slate-700">
+                Event <span className="text-red-500">*</span>
               </label>
-              <input
-                id="eventName"
-                type="text"
-                value={eventName}
-                onChange={(e) => setEventName(e.target.value)}
-                placeholder="e.g. Run For Hope"
-                required
+              <select
+                id="eventId"
+                value={activeEventId}
+                onChange={(e) => handleSelectEvent(e.target.value)}
                 className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-200"
-              />
+                required
+              >
+                <option value="">Select event</option>
+                {events.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.name}
+                  </option>
+                ))}
+              </select>
             </div>
             <div
               onDrop={handleDrop}
@@ -254,7 +291,7 @@ export default function AdminImportPage() {
 
             <button
               type="submit"
-              disabled={uploading || !eventName.trim() || !file}
+              disabled={uploading || !activeEventId || !file}
               className="h-11 w-full rounded-xl bg-[#E11D48] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#BE123C] disabled:opacity-60"
             >
               {uploading ? "Importing..." : "Import Excel"}

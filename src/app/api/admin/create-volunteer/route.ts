@@ -10,6 +10,8 @@ const createVolunteerSchema = z.object({
   phone: z.string().regex(/^[6-9]\d{9}$/, "Phone number must be a valid 10-digit Indian mobile number"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   counterName: z.string().min(1, "Counter name is required"),
+  role: z.enum(["VOLUNTEER", "ORGANIZER"]).default("VOLUNTEER"),
+  eventId: z.string().uuid("Event is required"),
 });
 
 export async function POST(request: Request) {
@@ -30,7 +32,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: msg }, { status: 400 });
     }
 
-    const { name, phone, password, counterName } = parsed.data;
+    const { name, phone, password, counterName, role, eventId } = parsed.data;
     const normalizedPhone = phone.trim();
 
     const existing = await prisma.volunteer.findUnique({
@@ -51,6 +53,14 @@ export async function POST(request: Request) {
       );
     }
 
+    const rows = await prisma.$queryRaw<{ id: string }[]>`
+      SELECT id FROM "ExpoEvent" WHERE id = ${eventId} LIMIT 1
+    `;
+    const event = rows[0] ?? null;
+    if (!event) {
+      return NextResponse.json({ error: "Selected event does not exist" }, { status: 404 });
+    }
+
     const passwordHash = await bcrypt.hash(password, 10);
 
     await prisma.volunteer.create({
@@ -58,7 +68,8 @@ export async function POST(request: Request) {
         name: name.trim(),
         phone: normalizedPhone,
         password: passwordHash,
-        role: "VOLUNTEER",
+        role,
+        eventId,
         counterName: counterName.trim(),
       },
     });
@@ -66,7 +77,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         success: true,
-        message: "Volunteer created successfully",
+        message: `${role === "ORGANIZER" ? "Organizer" : "Volunteer"} created successfully`,
       },
       { status: 201 }
     );

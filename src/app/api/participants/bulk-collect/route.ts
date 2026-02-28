@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { z } from "zod";
 
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-server";
 import { sendCollectionEmail } from "@/lib/emailService";
+import { ACTIVE_EVENT_COOKIE_NAME } from "@/lib/auth";
 
 const bulkCollectSchema = z.object({
   participantIds: z.array(z.string().uuid()).min(1, "At least one participant required"),
@@ -55,6 +57,17 @@ export async function POST(request: Request) {
   }
 
   try {
+    if (auth.role !== "ADMIN" && !auth.eventId) {
+      return NextResponse.json({ error: "Event assignment required" }, { status: 403 });
+    }
+
+    const cookieStore = await cookies();
+    const adminEventId = cookieStore.get(ACTIVE_EVENT_COOKIE_NAME)?.value ?? null;
+    const eventFilter =
+      auth.role === "ADMIN"
+        ? adminEventId ? { eventId: adminEventId } : {}
+        : { eventId: auth.eventId };
+
     const body = await request.json();
     const parsed = bulkCollectSchema.safeParse(body);
     if (!parsed.success) {
@@ -82,8 +95,8 @@ export async function POST(request: Request) {
     let skipped = 0;
 
     for (const id of participantIds) {
-      const participant = await prisma.participant.findUnique({
-        where: { id },
+      const participant = await prisma.participant.findFirst({
+        where: { id, ...eventFilter },
         include: {
           expoEvent: {
             select: { name: true },

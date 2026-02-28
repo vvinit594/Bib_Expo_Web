@@ -7,6 +7,7 @@ export type AuthUser = {
   phone: string;
   role: string;
   counterName: string | null;
+  eventId: string | null;
 };
 
 export async function getAuthUser(): Promise<AuthUser | null> {
@@ -25,5 +26,13 @@ export async function requireAuth(): Promise<AuthUser> {
 export async function requireAdmin(): Promise<AuthUser> {
   const user = await requireAuth();
   if (user.role !== "ADMIN") throw new Error("Forbidden");
+  return user;
+}
+
+export async function requireOrganizerOrAdmin(): Promise<AuthUser> {
+  const user = await requireAuth();
+  if (user.role !== "ADMIN" && user.role !== "ORGANIZER") {
+    throw new Error("Forbidden");
+  }
   return user;
 }

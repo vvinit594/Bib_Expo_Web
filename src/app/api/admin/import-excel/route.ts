@@ -104,12 +104,23 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
-    const eventName = String(formData.get("eventName") ?? "").trim();
+    const eventId = String(formData.get("eventId") ?? "").trim();
 
-    if (!eventName) {
+    if (!eventId) {
       return NextResponse.json(
-        { error: "Event name is required" },
+        { error: "Event is required" },
         { status: 400 }
+      );
+    }
+
+    const eventRows = await prisma.$queryRaw<{ id: string }[]>`
+      SELECT id FROM "ExpoEvent" WHERE id = ${eventId} LIMIT 1
+    `;
+    const selectedEvent = eventRows[0] ?? null;
+    if (!selectedEvent) {
+      return NextResponse.json(
+        { error: "Selected event does not exist" },
+        { status: 404 }
       );
     }
 
@@ -131,19 +142,19 @@ export async function POST(request: Request) {
     }
 
     const sheet = workbook.Sheets[sheetName];
-    const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+    const sheetRows = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
       header: 1,
       defval: "",
     }) as unknown[][];
 
-    if (rows.length < 2) {
+    if (sheetRows.length < 2) {
       return NextResponse.json(
         { error: "Excel must have a header row and at least one data row" },
         { status: 400 }
       );
     }
 
-    const headers = rows[0] as string[];
+    const headers = sheetRows[0] as string[];
     let colMap = getColumnIndex(headers);
 
     // Fallback: when first two columns have empty/missing headers but we have Email ID, Phone #, etc.,
@@ -168,8 +179,8 @@ export async function POST(request: Request) {
     const parsed: ParsedRow[] = [];
     const failed: { row: number; reason: string }[] = [];
 
-    for (let i = 1; i < rows.length; i++) {
-      const row = rows[i];
+    for (let i = 1; i < sheetRows.length; i++) {
+      const row = sheetRows[i];
       if (!Array.isArray(row)) continue;
 
       const p = parseRow(row, colMap);
@@ -189,7 +200,7 @@ export async function POST(request: Request) {
     if (parsed.length === 0) {
       return NextResponse.json({
         success: false,
-        totalRows: rows.length - 1,
+        totalRows: sheetRows.length - 1,
         imported: 0,
         failed: failed.length,
         failedDetails: failed.slice(0, 20),
@@ -197,24 +208,14 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    const existingCount = await prisma.participant.count();
+    const existingCount = await prisma.participant.count({ where: { eventId } });
     if (existingCount > 0) {
       return NextResponse.json({
-        error: "Event data already exists. Delete existing event data before uploading a new Excel file.",
+        error: "This event already has participant data. Delete this event's data before re-uploading.",
       }, { status: 409 });
     }
 
     const nextBib = BIB_START;
-
-    const [eventRow] = await prisma.$queryRaw<[{ id: string }]>`
-      INSERT INTO "ExpoEvent" (id, name, "createdAt")
-      VALUES (gen_random_uuid(), ${eventName}, NOW())
-      RETURNING id
-    `;
-    const eventId = eventRow?.id;
-    if (!eventId) {
-      return NextResponse.json({ error: "Failed to create event" }, { status: 500 });
-    }
 
     const toInsert = parsed.map((p, idx) => ({
       bibNumber: nextBib + idx,
@@ -238,7 +239,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      totalRows: rows.length - 1,
+      totalRows: sheetRows.length - 1,
       imported: parsed.length,
       failed: failed.length,
       failedDetails: failed.slice(0, 20),
