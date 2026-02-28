@@ -46,7 +46,9 @@ export async function GET(request: Request) {
           ? p.source === "ON_SPOT"
             ? "on-spot"
             : "pending"
-          : "collected";
+          : p.collectionStatus === "Collected_By_Behalf"
+            ? "collected-by-behalf"
+            : "collected";
 
       const collectedAt = p.collectedAt
         ? p.collectedAt.toLocaleTimeString("en-IN", {
@@ -78,8 +80,14 @@ export async function GET(request: Request) {
         bib: `#${p.bibNumber}`,
         bibNumber: p.bibNumber,
         name: p.name,
+        email: p.email ?? "",
+        phone: p.phone ?? "",
+        age: p.age ?? "",
         category: p.category ?? "",
+        gender: p.gender ?? "",
+        tShirtSize: p.tShirtSize ?? "",
         status,
+        collectionStatus: p.collectionStatus,
         group: p.groupName ?? undefined,
         registeredOn: p.registeredOn ?? "",
         emailVerified: p.emailVerified,

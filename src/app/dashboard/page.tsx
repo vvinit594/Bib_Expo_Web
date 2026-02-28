@@ -13,8 +13,14 @@ type Participant = {
   name: string;
   bib: string;
   bibNumber?: number;
+  email: string;
+  phone: string;
+  age: string;
   category: string;
+  gender: string;
+  tShirtSize: string;
   status: ParticipantStatus;
+  collectionStatus: "Pending" | "Collected" | "Collected_By_Behalf";
   group?: string;
   registeredOn: string;
   emailVerified: boolean;
@@ -569,29 +575,42 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-4 text-[0.7rem] text-slate-500">
-                    <span>
-                      Registered:{" "}
-                      <span className="font-medium text-slate-700">{p.registeredOn}</span>
-                    </span>
-                    <span>
-                      Email:{" "}
-                      <span className="font-medium text-emerald-600">
-                        {p.emailVerified ? "Verified" : "Not verified"}
-                      </span>
-                    </span>
-                    <span>
-                      Payment:{" "}
-                      <span className="font-medium text-emerald-600">
+                  <div className="grid gap-2 rounded-xl bg-slate-50/80 p-3 text-[0.72rem] text-slate-600 sm:grid-cols-2 lg:grid-cols-3">
+                    <p><span className="font-medium text-slate-700">Full Name:</span> {p.name}</p>
+                    <p><span className="font-medium text-slate-700">Bib Number:</span> {p.bib}</p>
+                    <p><span className="font-medium text-slate-700">Email ID:</span> {p.email || "—"}</p>
+                    <p><span className="font-medium text-slate-700">Phone Number:</span> {p.phone || "—"}</p>
+                    <p><span className="font-medium text-slate-700">Age:</span> {p.age || "—"}</p>
+                    <p><span className="font-medium text-slate-700">Event Category:</span> {p.category || "—"}</p>
+                    <p><span className="font-medium text-slate-700">Gender:</span> {p.gender || "—"}</p>
+                    <p><span className="font-medium text-slate-700">T-Shirt Size:</span> {p.tShirtSize || "—"}</p>
+                    <p>
+                      <span className="font-medium text-slate-700">Payment Status:</span>{" "}
+                      <span className={p.paymentStatus === "paid" ? "text-emerald-600 font-medium" : "text-amber-600 font-medium"}>
                         {p.paymentStatus === "paid" ? "Paid" : "Pending"}
                       </span>
-                    </span>
-                    {p.collectedAt && p.collectedBy ? (
-                      <span>
-                        Collected at {p.collectedAt} ·{" "}
-                        <span className="font-medium text-slate-700">{p.collectedBy}</span>
+                    </p>
+                    <p>
+                      <span className="font-medium text-slate-700">Collection Status:</span>{" "}
+                      {p.status === "pending"
+                        ? "Pending"
+                        : p.status === "on-spot"
+                          ? "On-spot"
+                          : p.collectedBy
+                            ? `Collected (${p.collectedBy})`
+                            : "Collected"}
+                    </p>
+                    {p.collectedAt ? (
+                      <p><span className="font-medium text-slate-700">Collected Time:</span> {p.collectedAt}</p>
+                    ) : (
+                      <p><span className="font-medium text-slate-700">Collected Time:</span> —</p>
+                    )}
+                    <p>
+                      <span className="font-medium text-slate-700">Email Verification:</span>{" "}
+                      <span className={p.emailVerified ? "text-emerald-600 font-medium" : "text-slate-500"}>
+                        {p.emailVerified ? "Verified" : "Not verified"}
                       </span>
-                    ) : null}
+                    </p>
                   </div>
 
                   <div className="flex flex-col gap-2 pt-1 text-[0.75rem] sm:flex-row sm:items-center sm:justify-between">
