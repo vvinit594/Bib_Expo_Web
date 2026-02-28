@@ -37,7 +37,9 @@ export async function POST(
       select: { name: true },
     });
 
-    const revertedBy = actor?.name?.trim() || (auth.role === "ADMIN" ? "Admin" : "Volunteer");
+    const revertedBy = auth.role === "ADMIN"
+      ? "Admin"
+      : actor?.name?.trim() || "Volunteer";
 
     await prisma.$transaction([
       prisma.participant.update({

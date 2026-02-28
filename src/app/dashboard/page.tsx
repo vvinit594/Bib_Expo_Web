@@ -53,6 +53,7 @@ export default function DashboardPage() {
   const [showOnSpotModal, setShowOnSpotModal] = React.useState(false);
   const [collectingId, setCollectingId] = React.useState<string | null>(null);
   const [undoingId, setUndoingId] = React.useState<string | null>(null);
+  const [undoConfirmFor, setUndoConfirmFor] = React.useState<Participant | null>(null);
   const [stats, setStats] = React.useState<{
     total: number;
     collected: number;
@@ -233,15 +234,16 @@ export default function DashboardPage() {
     }
   }
 
-  async function handleUndoCollection(p: Participant) {
-    if (undoingId) return;
-    setUndoingId(p.id);
+  async function handleUndoCollection() {
+    if (!undoConfirmFor || undoingId) return;
+    setUndoingId(undoConfirmFor.id);
     try {
-      const res = await fetch(`/api/participants/${p.id}/undo-collect`, {
+      const res = await fetch(`/api/participants/${undoConfirmFor.id}/undo-collect`, {
         method: "POST",
       });
       const data = await res.json();
       if (res.ok) {
+        setUndoConfirmFor(null);
         fetchParticipants();
       } else {
         setBulkSuccessMessage(data.error ?? "Undo failed.");
@@ -655,7 +657,7 @@ export default function DashboardPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleUndoCollection(p)}
+                            onClick={() => setUndoConfirmFor(p)}
                             disabled={undoingId === p.id}
                             className="inline-flex items-center justify-center rounded-full border border-amber-200 bg-amber-50 px-3.5 py-1.5 text-[0.7rem] font-semibold text-amber-700 shadow-sm transition hover:bg-amber-100 disabled:opacity-60"
                           >
@@ -746,6 +748,39 @@ export default function DashboardPage() {
           </div>
         </aside>
       </main>
+
+      {/* Undo confirmation modal */}
+      {undoConfirmFor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 py-6 backdrop-blur-[2px]">
+          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl shadow-slate-900/25">
+            <h2 className="text-base font-semibold text-slate-900">Confirm Undo</h2>
+            <p className="mt-2 text-sm text-slate-600">
+              Are you sure you want to undo this collection? This action will revert the participant&apos;s status back to Pending.
+            </p>
+            <p className="mt-2 text-xs text-slate-500">
+              Participant: <span className="font-medium text-slate-700">{undoConfirmFor.name}</span>
+            </p>
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setUndoConfirmFor(null)}
+                disabled={!!undoingId}
+                className="inline-flex h-9 items-center justify-center rounded-full border border-slate-200 bg-white px-4 text-xs font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleUndoCollection}
+                disabled={undoingId === undoConfirmFor.id}
+                className="inline-flex h-9 items-center justify-center rounded-full bg-amber-600 px-4 text-xs font-semibold text-white shadow-sm transition hover:bg-amber-700 disabled:opacity-60"
+              >
+                {undoingId === undoConfirmFor.id ? "Undoing..." : "Confirm Undo"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Bulk collection modal */}
       {showBulkModal && (
