@@ -86,10 +86,16 @@ export default function DashboardPage() {
   const [events, setEvents] = React.useState<EventItem[]>([]);
   const [activeEventId, setActiveEventId] = React.useState<string>("");
   const [switchingEvent, setSwitchingEvent] = React.useState(false);
+  const [eventMenuOpen, setEventMenuOpen] = React.useState(false);
+  const [mobileEventMenuOpen, setMobileEventMenuOpen] = React.useState(false);
   const [volunteerCount, setVolunteerCount] = React.useState<number | null>(null);
   const [activities, setActivities] = React.useState<ActivityItem[]>([]);
 
   const isAdmin = user?.role === "ADMIN";
+  const activeEventName = React.useMemo(
+    () => events.find((ev) => ev.id === activeEventId)?.name ?? "Switch Event",
+    [events, activeEventId]
+  );
 
   const fetchVolunteerCount = React.useCallback(() => {
     fetch("/api/volunteers/count")
@@ -211,6 +217,12 @@ export default function DashboardPage() {
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, [fetchVolunteerCount]);
+
+  React.useEffect(() => {
+    if (!mobileMenuOpen) {
+      setMobileEventMenuOpen(false);
+    }
+  }, [mobileMenuOpen]);
 
   async function handleMarkCollected(p: Participant, type: "self" | "behalf", extra?: { name: string; contact: string; relation: string }) {
     if (collectingId) return;
@@ -344,19 +356,80 @@ export default function DashboardPage() {
               </span>
             </span>
             {isAdmin && (
-              <select
-                value={activeEventId}
-                onChange={(e) => handleSwitchEvent(e.target.value)}
-                disabled={switchingEvent || events.length === 0}
-                className="h-9 rounded-full border border-slate-200 bg-white px-3 text-xs text-slate-700 shadow-sm outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-200 disabled:opacity-60"
-              >
-                <option value="">Switch Event</option>
-                {events.map((ev) => (
-                  <option key={ev.id} value={ev.id}>
-                    {ev.name}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setEventMenuOpen((o) => !o)}
+                  disabled={switchingEvent || events.length === 0}
+                  className="inline-flex h-9 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-60"
+                >
+                  <span className="max-w-[120px] truncate">{switchingEvent ? "Switching..." : activeEventName}</span>
+                  <svg
+                    className={`size-3 transition ${eventMenuOpen ? "rotate-180" : ""}`}
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </button>
+
+                {eventMenuOpen && (
+                  <>
+                    <button
+                      type="button"
+                      aria-label="Close event menu"
+                      onClick={() => setEventMenuOpen(false)}
+                      className="fixed inset-0 z-40 cursor-default"
+                    />
+                    <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                      <p className="px-2 py-1 text-[0.65rem] font-medium uppercase tracking-wide text-slate-500">
+                        Switch Event
+                      </p>
+                      <div className="max-h-64 overflow-auto">
+                        {events.map((ev) => {
+                          const selected = ev.id === activeEventId;
+                          return (
+                            <button
+                              key={ev.id}
+                              type="button"
+                              onClick={() => {
+                                setEventMenuOpen(false);
+                                void handleSwitchEvent(ev.id);
+                              }}
+                              className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-xs transition ${
+                                selected
+                                  ? "bg-emerald-50 text-emerald-700"
+                                  : "text-slate-700 hover:bg-slate-50"
+                              }`}
+                            >
+                              <span className="truncate">{ev.name}</span>
+                              {selected && (
+                                <svg
+                                  className="size-3.5 shrink-0"
+                                  viewBox="0 0 20 20"
+                                  fill="currentColor"
+                                  aria-hidden="true"
+                                >
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M16.704 5.29a1 1 0 0 1 0 1.42l-7.29 7.29a1 1 0 0 1-1.415 0L3.29 9.29a1 1 0 1 1 1.415-1.415l4.002 4.002 6.584-6.585a1 1 0 0 1 1.414 0Z"
+                                    clipRule="evenodd"
+                                  />
+                                </svg>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
             )}
           </div>
 
@@ -436,19 +509,68 @@ export default function DashboardPage() {
                         </p>
                       )}
                       {isAdmin && (
-                        <select
-                          value={activeEventId}
-                          onChange={(e) => handleSwitchEvent(e.target.value)}
-                          disabled={switchingEvent || events.length === 0}
-                          className="mt-2 h-8 w-full rounded-lg border border-slate-200 bg-white px-2 text-[0.7rem] text-slate-700 outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-200"
-                        >
-                          <option value="">Switch Event</option>
-                          {events.map((ev) => (
-                            <option key={ev.id} value={ev.id}>
-                              {ev.name}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="relative mt-2">
+                          <button
+                            type="button"
+                            onClick={() => setMobileEventMenuOpen((o) => !o)}
+                            disabled={switchingEvent || events.length === 0}
+                            className="inline-flex h-8 w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-2 text-[0.7rem] text-slate-700 shadow-sm disabled:opacity-60"
+                          >
+                            <span className="truncate">{switchingEvent ? "Switching..." : activeEventName}</span>
+                            <svg
+                              className={`size-3 transition ${mobileEventMenuOpen ? "rotate-180" : ""}`}
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                              aria-hidden="true"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                          </button>
+                          {mobileEventMenuOpen && (
+                            <div className="mt-1 rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
+                              <div className="max-h-40 overflow-auto">
+                                {events.map((ev) => {
+                                  const selected = ev.id === activeEventId;
+                                  return (
+                                    <button
+                                      key={ev.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setMobileEventMenuOpen(false);
+                                        void handleSwitchEvent(ev.id);
+                                      }}
+                                      className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-[0.7rem] transition ${
+                                        selected
+                                          ? "bg-emerald-50 text-emerald-700"
+                                          : "text-slate-700 hover:bg-slate-50"
+                                      }`}
+                                    >
+                                      <span className="truncate">{ev.name}</span>
+                                      {selected && (
+                                        <svg
+                                          className="size-3.5 shrink-0"
+                                          viewBox="0 0 20 20"
+                                          fill="currentColor"
+                                          aria-hidden="true"
+                                        >
+                                          <path
+                                            fillRule="evenodd"
+                                            d="M16.704 5.29a1 1 0 0 1 0 1.42l-7.29 7.29a1 1 0 0 1-1.415 0L3.29 9.29a1 1 0 1 1 1.415-1.415l4.002 4.002 6.584-6.585a1 1 0 0 1 1.414 0Z"
+                                            clipRule="evenodd"
+                                          />
+                                        </svg>
+                                      )}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       )}
                       <p className="text-[0.7rem] text-slate-500">
                         {user?.counterName ?? "Counter 4 – 10K"}
