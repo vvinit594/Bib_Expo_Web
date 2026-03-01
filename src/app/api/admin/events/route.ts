@@ -20,19 +20,43 @@ export async function GET() {
   }
 
   try {
-    const [eventRows, cookieStore] = await Promise.all([
+    const [eventRows, participantGroups, userGroups, cookieStore] = await Promise.all([
       prisma.$queryRaw<{ id: string; name: string; createdAt: Date }[]>`
         SELECT id, name, "createdAt" FROM "ExpoEvent" ORDER BY "createdAt" DESC
       `,
+      prisma.participant.groupBy({
+        by: ["eventId"],
+        _count: { _all: true },
+        where: { eventId: { not: null } },
+      }),
+      prisma.volunteer.groupBy({
+        by: ["eventId", "role"],
+        _count: { _all: true },
+        where: { eventId: { not: null }, role: { in: ["VOLUNTEER", "ORGANIZER"] } },
+      }),
       cookies(),
     ]);
 
     const activeEventId = cookieStore.get(ACTIVE_EVENT_COOKIE_NAME)?.value ?? null;
+    const participantCountByEvent = new Map(
+      participantGroups.map((g) => [g.eventId, g._count._all])
+    );
+    const volunteerCountByEvent = new Map<string, number>();
+    const organizerCountByEvent = new Map<string, number>();
+    for (const g of userGroups) {
+      if (!g.eventId) continue;
+      if (g.role === "VOLUNTEER") volunteerCountByEvent.set(g.eventId, g._count._all);
+      if (g.role === "ORGANIZER") organizerCountByEvent.set(g.eventId, g._count._all);
+    }
+
     return NextResponse.json({
       events: eventRows.map((e) => ({
         id: e.id,
         name: e.name,
         createdAt: e.createdAt.toISOString(),
+        participantCount: participantCountByEvent.get(e.id) ?? 0,
+        volunteerCount: volunteerCountByEvent.get(e.id) ?? 0,
+        organizerCount: organizerCountByEvent.get(e.id) ?? 0,
       })),
       activeEventId,
     });

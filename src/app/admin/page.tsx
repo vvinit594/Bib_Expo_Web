@@ -21,6 +21,9 @@ type Volunteer = {
 type EventItem = {
   id: string;
   name: string;
+  participantCount: number;
+  volunteerCount: number;
+  organizerCount: number;
 };
 
 export default function AdminPage() {
@@ -42,6 +45,16 @@ export default function AdminPage() {
   const [volunteersLoading, setVolunteersLoading] = React.useState(true);
   const [deleteConfirmFor, setDeleteConfirmFor] = React.useState<Volunteer | null>(null);
   const [deleting, setDeleting] = React.useState(false);
+
+  const volunteerUsers = React.useMemo(
+    () => volunteers.filter((v) => v.role === "VOLUNTEER"),
+    [volunteers]
+  );
+  const organizerUsers = React.useMemo(
+    () => volunteers.filter((v) => v.role === "ORGANIZER"),
+    [volunteers]
+  );
+  const hasActiveEvent = !!activeEventId;
 
   const fetchEvents = React.useCallback(() => {
     fetch("/api/admin/events")
@@ -264,7 +277,39 @@ export default function AdminPage() {
               {creatingEvent ? "Creating..." : "Create Event"}
             </button>
           </form>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {events.map((ev) => (
+              <button
+                key={ev.id}
+                type="button"
+                onClick={() => handleSwitchEvent(ev.id)}
+                className={`rounded-xl border p-4 text-left transition ${
+                  ev.id === activeEventId
+                    ? "border-emerald-300 bg-emerald-50"
+                    : "border-slate-200 bg-white hover:bg-slate-50"
+                }`}
+              >
+                <p className="text-sm font-semibold text-slate-900">{ev.name}</p>
+                <p className="mt-2 text-xs text-slate-600">
+                  Participants: <span className="font-medium text-slate-800">{ev.participantCount}</span>
+                </p>
+                <p className="text-xs text-slate-600">
+                  Volunteers: <span className="font-medium text-slate-800">{ev.volunteerCount}</span>
+                </p>
+                <p className="text-xs text-slate-600">
+                  Organizers: <span className="font-medium text-slate-800">{ev.organizerCount}</span>
+                </p>
+              </button>
+            ))}
+          </div>
         </div>
+
+        {!hasActiveEvent && (
+          <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            No active event selected. Create or select an event to enable volunteer/organizer creation and scoped management.
+          </div>
+        )}
 
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h1 className="text-lg font-semibold">Create Volunteer Account</h1>
@@ -284,6 +329,7 @@ export default function AdminPage() {
                 placeholder="Volunteer full name"
                 className="mt-1 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-200"
                 required
+                disabled={!hasActiveEvent}
               />
             </div>
             <div>
@@ -300,6 +346,7 @@ export default function AdminPage() {
                 required
                 pattern="[6-9][0-9]{9}"
                 maxLength={10}
+                disabled={!hasActiveEvent}
               />
             </div>
             <div>
@@ -315,6 +362,7 @@ export default function AdminPage() {
                 className="mt-1 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-200"
                 required
                 minLength={6}
+                disabled={!hasActiveEvent}
               />
             </div>
             <div>
@@ -326,6 +374,7 @@ export default function AdminPage() {
                 value={role}
                 onChange={(e) => setRole(e.target.value as "VOLUNTEER" | "ORGANIZER")}
                 className="mt-1 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-200"
+                disabled={!hasActiveEvent}
               >
                 <option value="VOLUNTEER">Volunteer</option>
                 <option value="ORGANIZER">Organizer</option>
@@ -342,6 +391,7 @@ export default function AdminPage() {
                 placeholder="e.g. Counter 4 – 10K"
                 className="mt-1 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-200"
                 required
+                disabled={!hasActiveEvent}
               />
             </div>
 
@@ -359,16 +409,16 @@ export default function AdminPage() {
           </form>
         </div>
 
-        {/* Volunteer list */}
+        {/* Volunteers section */}
         <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-base font-semibold text-slate-900">Manage Volunteers & Organizers</h2>
+          <h2 className="text-base font-semibold text-slate-900">Manage Volunteers</h2>
           <p className="mt-0.5 text-sm text-slate-500">
-            All created volunteers. Deleting removes access immediately.
+            Event-scoped volunteer accounts. Deleting removes access immediately.
           </p>
 
           {volunteersLoading ? (
             <p className="mt-6 text-sm text-slate-500">Loading volunteers...</p>
-          ) : volunteers.length === 0 ? (
+          ) : volunteerUsers.length === 0 ? (
             <p className="mt-6 text-sm text-slate-500">No volunteers yet. Create one above.</p>
           ) : (
             <>
@@ -379,7 +429,6 @@ export default function AdminPage() {
                     <tr className="border-b border-slate-200 text-slate-600">
                       <th className="pb-3 pr-4 font-medium">Username</th>
                       <th className="pb-3 pr-4 font-medium">Phone Number</th>
-                      <th className="pb-3 pr-4 font-medium">Role</th>
                       <th className="pb-3 pr-4 font-medium">Event</th>
                       <th className="pb-3 pr-4 font-medium">Counter No./Name</th>
                       <th className="pb-3 pr-4 font-medium">Created</th>
@@ -388,11 +437,10 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {volunteers.map((v) => (
+                    {volunteerUsers.map((v) => (
                       <tr key={v.id} className="border-b border-slate-100">
                         <td className="py-3 pr-4 font-medium text-slate-900">{v.name}</td>
                         <td className="py-3 pr-4 text-slate-600">{v.phone}</td>
-                        <td className="py-3 pr-4 text-slate-600">{v.role}</td>
                         <td className="py-3 pr-4 text-slate-600">{v.eventName}</td>
                         <td className="py-3 pr-4 text-slate-600">{v.counterName}</td>
                         <td className="py-3 pr-4 text-slate-500">
@@ -423,7 +471,7 @@ export default function AdminPage() {
 
               {/* Mobile cards */}
               <div className="mt-6 space-y-3 md:hidden">
-                {volunteers.map((v) => (
+                {volunteerUsers.map((v) => (
                   <div
                     key={v.id}
                     className="rounded-xl border border-slate-200 p-4"
@@ -433,7 +481,7 @@ export default function AdminPage() {
                         <p className="font-medium text-slate-900">{v.name}</p>
                         <p className="mt-0.5 text-xs text-slate-600">{v.phone}</p>
                         <p className="mt-1 text-xs text-slate-500">
-                          {v.role} · {v.eventName}
+                          Volunteer · {v.eventName}
                         </p>
                         <p className="mt-1 text-xs text-slate-500">
                           {v.counterName} · {new Date(v.createdAt).toLocaleDateString()}
@@ -448,6 +496,98 @@ export default function AdminPage() {
                             setError(null);
                             setDeleteConfirmFor(v);
                           }}
+                        className="shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-100"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Organizers section */}
+        <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-base font-semibold text-slate-900">Manage Organizers</h2>
+          <p className="mt-0.5 text-sm text-slate-500">
+            Organizer accounts are event-limited and cannot access global admin controls.
+          </p>
+
+          {volunteersLoading ? (
+            <p className="mt-6 text-sm text-slate-500">Loading organizers...</p>
+          ) : organizerUsers.length === 0 ? (
+            <p className="mt-6 text-sm text-slate-500">No organizers yet. Create one above.</p>
+          ) : (
+            <>
+              <div className="mt-6 hidden overflow-x-auto md:block">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-slate-600">
+                      <th className="pb-3 pr-4 font-medium">Username</th>
+                      <th className="pb-3 pr-4 font-medium">Phone Number</th>
+                      <th className="pb-3 pr-4 font-medium">Event</th>
+                      <th className="pb-3 pr-4 font-medium">Counter No./Name</th>
+                      <th className="pb-3 pr-4 font-medium">Created</th>
+                      <th className="pb-3 pr-4 font-medium">Status</th>
+                      <th className="pb-3 font-medium"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {organizerUsers.map((v) => (
+                      <tr key={v.id} className="border-b border-slate-100">
+                        <td className="py-3 pr-4 font-medium text-slate-900">{v.name}</td>
+                        <td className="py-3 pr-4 text-slate-600">{v.phone}</td>
+                        <td className="py-3 pr-4 text-slate-600">{v.eventName}</td>
+                        <td className="py-3 pr-4 text-slate-600">{v.counterName}</td>
+                        <td className="py-3 pr-4 text-slate-500">
+                          {new Date(v.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="py-3 pr-4">
+                          <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+                            {v.status}
+                          </span>
+                        </td>
+                        <td className="py-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setError(null);
+                              setDeleteConfirmFor(v);
+                            }}
+                            className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-100"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mt-6 space-y-3 md:hidden">
+                {organizerUsers.map((v) => (
+                  <div key={v.id} className="rounded-xl border border-slate-200 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-slate-900">{v.name}</p>
+                        <p className="mt-0.5 text-xs text-slate-600">{v.phone}</p>
+                        <p className="mt-1 text-xs text-slate-500">Organizer · {v.eventName}</p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {v.counterName} · {new Date(v.createdAt).toLocaleDateString()}
+                        </p>
+                        <span className="mt-2 inline-flex rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+                          {v.status}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setError(null);
+                          setDeleteConfirmFor(v);
+                        }}
                         className="shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-100"
                       >
                         Delete

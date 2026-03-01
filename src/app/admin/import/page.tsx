@@ -63,11 +63,15 @@ export default function AdminImportPage() {
   }
 
   React.useEffect(() => {
+    if (!activeEventId) {
+      setParticipantCount(null);
+      return;
+    }
     fetch("/api/participants/count")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => data != null && setParticipantCount(data.count))
       .catch(() => {});
-  }, [result]);
+  }, [result, activeEventId]);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
@@ -175,7 +179,7 @@ export default function AdminImportPage() {
     }
   }
 
-  const hasParticipants = (participantCount ?? 0) > 0;
+  const hasParticipants = !!activeEventId && (participantCount ?? 0) > 0;
 
   return (
     <div className="min-h-dvh bg-slate-50 text-slate-900">
@@ -208,6 +212,12 @@ export default function AdminImportPage() {
       </ScrollAwareHeader>
 
       <main className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
+        {!activeEventId && (
+          <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            No active event selected. Please create/select an event from Admin Panel before importing participant data.
+          </div>
+        )}
+
         {/* Upload section */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h1 className="text-lg font-semibold">Excel Import</h1>
