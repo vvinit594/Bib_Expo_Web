@@ -47,7 +47,7 @@ function LoginForm() {
         return;
       }
 
-      const redirect = searchParams.get("redirect") ?? "/dashboard";
+      const redirect = searchParams.get("redirect") ?? "/admin/events";
       router.push(redirect);
       router.refresh();
     } catch {

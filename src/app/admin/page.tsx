@@ -21,6 +21,7 @@ type Volunteer = {
 type EventItem = {
   id: string;
   name: string;
+  eventDate?: string;
   participantCount: number;
   volunteerCount: number;
   organizerCount: number;
@@ -35,8 +36,6 @@ export default function AdminPage() {
   const [role, setRole] = React.useState<"VOLUNTEER" | "ORGANIZER">("VOLUNTEER");
   const [events, setEvents] = React.useState<EventItem[]>([]);
   const [activeEventId, setActiveEventId] = React.useState("");
-  const [newEventName, setNewEventName] = React.useState("");
-  const [creatingEvent, setCreatingEvent] = React.useState(false);
   const [switchingEvent, setSwitchingEvent] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -156,32 +155,6 @@ export default function AdminPage() {
     }
   }
 
-  async function handleCreateEvent(e: React.FormEvent) {
-    e.preventDefault();
-    if (!newEventName.trim() || creatingEvent) return;
-    setCreatingEvent(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/admin/events", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newEventName.trim() }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "Failed to create event");
-        return;
-      }
-      setNewEventName("");
-      fetchEvents();
-      router.refresh();
-    } catch {
-      setError("Failed to create event");
-    } finally {
-      setCreatingEvent(false);
-    }
-  }
-
   async function handleDeleteConfirm() {
     if (!deleteConfirmFor) return;
     setDeleting(true);
@@ -240,9 +213,9 @@ export default function AdminPage() {
 
       <main className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
         <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-base font-semibold text-slate-900">Event Control</h2>
+          <h2 className="text-base font-semibold text-slate-900">Active Event Context</h2>
           <p className="mt-0.5 text-sm text-slate-500">
-            Create events and switch active event context for admin operations.
+            Select which event to use for volunteer/organizer management.
           </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
             <select
@@ -262,52 +235,19 @@ export default function AdminPage() {
               {switchingEvent ? "Switching..." : "Active Event"}
             </span>
           </div>
-          <form onSubmit={handleCreateEvent} className="mt-3 flex gap-2">
-            <input
-              value={newEventName}
-              onChange={(e) => setNewEventName(e.target.value)}
-              placeholder="Create new event name"
-              className="h-10 flex-1 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-200"
-            />
-            <button
-              type="submit"
-              disabled={creatingEvent || !newEventName.trim()}
-              className="h-10 rounded-lg bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
+          <div className="mt-3">
+            <Link
+              href="/admin/events"
+              className="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
             >
-              {creatingEvent ? "Creating..." : "Create Event"}
-            </button>
-          </form>
-
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {events.map((ev) => (
-              <button
-                key={ev.id}
-                type="button"
-                onClick={() => handleSwitchEvent(ev.id)}
-                className={`rounded-xl border p-4 text-left transition ${
-                  ev.id === activeEventId
-                    ? "border-emerald-300 bg-emerald-50"
-                    : "border-slate-200 bg-white hover:bg-slate-50"
-                }`}
-              >
-                <p className="text-sm font-semibold text-slate-900">{ev.name}</p>
-                <p className="mt-2 text-xs text-slate-600">
-                  Participants: <span className="font-medium text-slate-800">{ev.participantCount}</span>
-                </p>
-                <p className="text-xs text-slate-600">
-                  Volunteers: <span className="font-medium text-slate-800">{ev.volunteerCount}</span>
-                </p>
-                <p className="text-xs text-slate-600">
-                  Organizers: <span className="font-medium text-slate-800">{ev.organizerCount}</span>
-                </p>
-              </button>
-            ))}
+              Open Event Setup Page
+            </Link>
           </div>
         </div>
 
         {!hasActiveEvent && (
           <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            No active event selected. Create or select an event to enable volunteer/organizer creation and scoped management.
+            No active event selected. Please choose an event from Event Setup before creating users.
           </div>
         )}
 

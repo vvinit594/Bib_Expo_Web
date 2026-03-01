@@ -82,6 +82,7 @@ export default function DashboardPage() {
   const [bulkCollecting, setBulkCollecting] = React.useState(false);
   const [bulkSuccessMessage, setBulkSuccessMessage] = React.useState<string | null>(null);
   const [eventName, setEventName] = React.useState<string | null>(null);
+  const [eventDate, setEventDate] = React.useState<string | null>(null);
   const [events, setEvents] = React.useState<EventItem[]>([]);
   const [activeEventId, setActiveEventId] = React.useState<string>("");
   const [switchingEvent, setSwitchingEvent] = React.useState(false);
@@ -178,8 +179,14 @@ export default function DashboardPage() {
   React.useEffect(() => {
     fetch("/api/event/current")
       .then((res) => (res.ok ? res.json() : null))
-      .then((data) => setEventName(data?.name ?? null))
-      .catch(() => setEventName(null));
+      .then((data) => {
+        setEventName(data?.name ?? null);
+        setEventDate(data?.event?.eventDate ?? null);
+      })
+      .catch(() => {
+        setEventName(null);
+        setEventDate(null);
+      });
   }, [participants]);
 
   React.useEffect(() => {
@@ -331,7 +338,10 @@ export default function DashboardPage() {
           <div className="hidden items-center gap-3 md:flex">
             <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm">
               <span className="size-2 rounded-full bg-emerald-500" />
-              <span>{eventName ?? "No Active Event"}</span>
+              <span>
+                {eventName ?? "No Active Event"}
+                {eventDate ? ` · ${new Date(eventDate).toLocaleDateString()}` : ""}
+              </span>
             </span>
             {isAdmin && (
               <select
@@ -358,16 +368,16 @@ export default function DashboardPage() {
                   Admin
                 </span>
                 <Link
+                  href="/admin/events"
+                  className="hidden rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 md:inline-flex"
+                >
+                  Event Setup
+                </Link>
+                <Link
                   href="/admin"
                   className="hidden rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 md:inline-flex"
                 >
-                  Create Volunteer
-                </Link>
-                <Link
-                  href="/admin/import"
-                  className="hidden rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 md:inline-flex"
-                >
-                  Import Excel
+                  Manage Users
                 </Link>
               </>
             )}
@@ -420,6 +430,11 @@ export default function DashboardPage() {
                       <p className="text-xs font-medium text-slate-900">
                         {eventName ?? "No Active Event"}
                       </p>
+                      {eventDate && (
+                        <p className="text-[0.68rem] text-slate-500">
+                          {new Date(eventDate).toLocaleDateString()}
+                        </p>
+                      )}
                       {isAdmin && (
                         <select
                           value={activeEventId}
@@ -449,18 +464,18 @@ export default function DashboardPage() {
                         </span>
                         <div className="mt-2 flex flex-col gap-1">
                           <Link
+                            href="/admin/events"
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="flex h-11 items-center rounded-lg px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                          >
+                            Event Setup
+                          </Link>
+                          <Link
                             href="/admin"
                             onClick={() => setMobileMenuOpen(false)}
                             className="flex h-11 items-center rounded-lg px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                           >
-                            Create Volunteer
-                          </Link>
-                          <Link
-                            href="/admin/import"
-                            onClick={() => setMobileMenuOpen(false)}
-                            className="flex h-11 items-center rounded-lg px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                          >
-                            Import Excel
+                            Manage Users
                           </Link>
                         </div>
                       </div>

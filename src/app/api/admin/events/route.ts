@@ -21,8 +21,8 @@ export async function GET() {
 
   try {
     const [eventRows, participantGroups, userGroups, cookieStore] = await Promise.all([
-      prisma.$queryRaw<{ id: string; name: string; createdAt: Date }[]>`
-        SELECT id, name, "createdAt" FROM "ExpoEvent" ORDER BY "createdAt" DESC
+      prisma.$queryRaw<{ id: string; name: string; eventDate: Date; createdAt: Date }[]>`
+        SELECT id, name, "eventDate", "createdAt" FROM "ExpoEvent" ORDER BY "createdAt" DESC
       `,
       prisma.participant.groupBy({
         by: ["eventId"],
@@ -53,6 +53,7 @@ export async function GET() {
       events: eventRows.map((e) => ({
         id: e.id,
         name: e.name,
+        eventDate: e.eventDate.toISOString(),
         createdAt: e.createdAt.toISOString(),
         participantCount: participantCountByEvent.get(e.id) ?? 0,
         volunteerCount: volunteerCountByEvent.get(e.id) ?? 0,
@@ -86,10 +87,10 @@ export async function POST(request: Request) {
     }
 
     const name = parsed.data.name.trim();
-    const rows = await prisma.$queryRaw<{ id: string; name: string; createdAt: Date }[]>`
-      INSERT INTO "ExpoEvent" (id, name, "createdAt")
-      VALUES (gen_random_uuid(), ${name}, NOW())
-      RETURNING id, name, "createdAt"
+    const rows = await prisma.$queryRaw<{ id: string; name: string; eventDate: Date; createdAt: Date }[]>`
+      INSERT INTO "ExpoEvent" (id, name, "eventDate", "createdAt")
+      VALUES (gen_random_uuid(), ${name}, NOW(), NOW())
+      RETURNING id, name, "eventDate", "createdAt"
     `;
     const event = rows[0] ?? null;
     if (!event) {
@@ -101,6 +102,7 @@ export async function POST(request: Request) {
       event: {
         id: event.id,
         name: event.name,
+        eventDate: event.eventDate.toISOString(),
         createdAt: event.createdAt.toISOString(),
       },
     });

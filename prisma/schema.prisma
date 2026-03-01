@@ -38,6 +38,7 @@ enum ParticipantSource {
 model ExpoEvent {
   id           String        @id @default(uuid())
   name         String
+  eventDate    DateTime      @default(now())
   createdAt    DateTime      @default(now())
   participants Participant[]
   users        Volunteer[]

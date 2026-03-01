@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 
-import { AUTH_COOKIE_NAME } from "@/lib/auth";
+import { AUTH_COOKIE_NAME, ACTIVE_EVENT_COOKIE_NAME } from "@/lib/auth";
 
 const PUBLIC_PATHS = ["/", "/login", "/signup", "/volunteer-login"];
 const DASHBOARD_PATHS = ["/dashboard"];
 const ADMIN_PATHS = ["/admin"];
+const UUID_LIKE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 type Payload = {
   id: string;
@@ -58,6 +59,39 @@ export async function middleware(request: NextRequest) {
       loginUrl.searchParams.set("redirect", pathname);
       return NextResponse.redirect(loginUrl);
     }
+
+    const eventIdFromPath = pathname.startsWith("/dashboard/")
+      ? pathname.split("/")[2] ?? ""
+      : "";
+
+    if (eventIdFromPath) {
+      if (payload.role !== "ADMIN") {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
+      if (!UUID_LIKE.test(eventIdFromPath)) {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
+
+      const rewriteUrl = request.nextUrl.clone();
+      rewriteUrl.pathname = "/dashboard";
+      const response = NextResponse.rewrite(rewriteUrl);
+      response.cookies.set(ACTIVE_EVENT_COOKIE_NAME, eventIdFromPath, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 60 * 60 * 24 * 30,
+        path: "/",
+      });
+      return response;
+    }
+
+    if (payload.role === "ADMIN" && pathname === "/dashboard") {
+      const activeEvent = request.cookies.get(ACTIVE_EVENT_COOKIE_NAME)?.value;
+      if (!activeEvent) {
+        return NextResponse.redirect(new URL("/admin/events", request.url));
+      }
+    }
+
     return NextResponse.next();
   }
 
@@ -66,7 +100,8 @@ export async function middleware(request: NextRequest) {
     ["/login", "/signup", "/volunteer-login"].includes(pathname) &&
     payload
   ) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    const target = payload.role === "ADMIN" ? "/admin/events" : "/dashboard";
+    return NextResponse.redirect(new URL(target, request.url));
   }
 
   return NextResponse.next();
