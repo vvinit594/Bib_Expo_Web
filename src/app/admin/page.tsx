@@ -34,11 +34,12 @@ export default function AdminPage() {
   const [phone, setPhone] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [counterName, setCounterName] = React.useState("");
-  const [role, setRole] = React.useState<"VOLUNTEER" | "ORGANIZER">("VOLUNTEER");
+  const [accountMode, setAccountMode] = React.useState<"VOLUNTEER" | "ORGANIZER">("VOLUNTEER");
   const [activeEventId, setActiveEventId] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [showSuccessPopup, setShowSuccessPopup] = React.useState(false);
+  const [createdAccountType, setCreatedAccountType] = React.useState<"VOLUNTEER" | "ORGANIZER">("VOLUNTEER");
   const [volunteers, setVolunteers] = React.useState<Volunteer[]>([]);
   const [volunteersLoading, setVolunteersLoading] = React.useState(true);
   const [deleteConfirmFor, setDeleteConfirmFor] = React.useState<Volunteer | null>(null);
@@ -55,6 +56,8 @@ export default function AdminPage() {
   const isAdmin = roleName === "ADMIN";
   const isOrganizer = roleName === "ORGANIZER";
   const hasActiveEvent = !!activeEventId;
+  const effectiveRole: "VOLUNTEER" | "ORGANIZER" = isOrganizer ? "VOLUNTEER" : accountMode;
+  const showOrganizerForm = effectiveRole === "ORGANIZER";
 
   const fetchEvents = React.useCallback(() => {
     if (!isAdmin) return;
@@ -92,7 +95,7 @@ export default function AdminPage() {
         }
         if (user.role === "ORGANIZER") {
           setActiveEventId(user.eventId ?? "");
-          setRole("VOLUNTEER");
+          setAccountMode("VOLUNTEER");
         }
       })
       .catch(() => {});
@@ -127,8 +130,8 @@ export default function AdminPage() {
           name: name.trim(),
           phone: phone.trim(),
           password: password,
-          counterName: counterName.trim(),
-          role: isOrganizer ? "VOLUNTEER" : role,
+          counterName: showOrganizerForm ? undefined : counterName.trim(),
+          role: effectiveRole,
           eventId: activeEventId,
         }),
       });
@@ -141,11 +144,12 @@ export default function AdminPage() {
       }
 
       setShowSuccessPopup(true);
+      setCreatedAccountType(effectiveRole);
       setName("");
       setPhone("");
       setPassword("");
       setCounterName("");
-      setRole("VOLUNTEER");
+      if (isAdmin) setAccountMode("VOLUNTEER");
       fetchVolunteers();
       setTimeout(() => setShowSuccessPopup(false), 2000);
     } catch {
@@ -219,10 +223,48 @@ export default function AdminPage() {
         )}
 
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h1 className="text-lg font-semibold">Create Volunteer Account</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Add a new volunteer. Set their credentials for first login.
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h1 className="text-lg font-semibold">
+                {showOrganizerForm ? "Create Organizer Account" : "Create Volunteer Account"}
+              </h1>
+              <p className="mt-1 text-sm text-slate-500">
+                {showOrganizerForm
+                  ? "Add a new organizer for this event."
+                  : "Add a new volunteer. Set their credentials for first login."}
+              </p>
+            </div>
+            {isAdmin ? (
+              <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
+                <button
+                  type="button"
+                  onClick={() => setAccountMode("VOLUNTEER")}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                    accountMode === "VOLUNTEER"
+                      ? "bg-white text-slate-900 shadow-sm"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Volunteer
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAccountMode("ORGANIZER")}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                    accountMode === "ORGANIZER"
+                      ? "bg-white text-slate-900 shadow-sm"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Organizer
+                </button>
+              </div>
+            ) : (
+              <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-[0.7rem] font-medium text-slate-600">
+                Volunteer creation only
+              </span>
+            )}
+          </div>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div>
@@ -233,7 +275,7 @@ export default function AdminPage() {
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Volunteer full name"
+                placeholder={showOrganizerForm ? "Organizer full name" : "Volunteer full name"}
                 className="mt-1 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-200"
                 required
                 disabled={!hasActiveEvent}
@@ -272,30 +314,7 @@ export default function AdminPage() {
                 disabled={!hasActiveEvent}
               />
             </div>
-            <div>
-              <label htmlFor="role" className="block text-sm font-medium text-slate-700">
-                Account Type
-              </label>
-              {isAdmin ? (
-                <select
-                  id="role"
-                  value={role}
-                  onChange={(e) => setRole(e.target.value as "VOLUNTEER" | "ORGANIZER")}
-                  className="mt-1 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-200"
-                  disabled={!hasActiveEvent}
-                >
-                  <option value="VOLUNTEER">Volunteer</option>
-                  <option value="ORGANIZER">Organizer</option>
-                </select>
-              ) : (
-                <input
-                  id="role"
-                  value="Volunteer"
-                  readOnly
-                  className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700"
-                />
-              )}
-            </div>
+            {!showOrganizerForm && (
             <div>
               <label htmlFor="counterName" className="block text-sm font-medium text-slate-700">
                 Counter No./Name
@@ -310,6 +329,7 @@ export default function AdminPage() {
                 disabled={!hasActiveEvent}
               />
             </div>
+            )}
 
             {error && (
               <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
@@ -320,7 +340,7 @@ export default function AdminPage() {
               disabled={loading || !activeEventId}
               className="h-11 w-full rounded-xl bg-[#E11D48] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#BE123C] disabled:opacity-60"
             >
-              {loading ? "Creating..." : `Create ${isOrganizer ? "Volunteer" : role === "ORGANIZER" ? "Organizer" : "Volunteer"}`}
+              {loading ? "Creating..." : `Create ${showOrganizerForm ? "Organizer" : "Volunteer"}`}
             </button>
           </form>
         </div>
@@ -522,7 +542,7 @@ export default function AdminPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
               <p className="text-center font-semibold text-emerald-700">
-                Volunteer Account Created Successfully ✅
+                {createdAccountType === "ORGANIZER" ? "Organizer" : "Volunteer"} Account Created Successfully ✅
               </p>
               <p className="mt-1 text-center text-sm text-slate-500">
                 The volunteer list has been updated.

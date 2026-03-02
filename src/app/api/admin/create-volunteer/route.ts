@@ -9,7 +9,7 @@ const createVolunteerSchema = z.object({
   name: z.string().min(1, "Username is required"),
   phone: z.string().regex(/^[6-9]\d{9}$/, "Phone number must be a valid 10-digit Indian mobile number"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  counterName: z.string().min(1, "Counter name is required"),
+  counterName: z.string().optional(),
   role: z.enum(["VOLUNTEER", "ORGANIZER"]).default("VOLUNTEER"),
   eventId: z.string().uuid("Event is required").optional(),
 });
@@ -81,6 +81,13 @@ export async function POST(request: Request) {
     }
 
     const finalRole = isOrganizer ? "VOLUNTEER" : role;
+    const normalizedCounter = (counterName ?? "").trim();
+    if (finalRole === "VOLUNTEER" && !normalizedCounter) {
+      return NextResponse.json(
+        { error: "Counter name is required for volunteer accounts" },
+        { status: 400 }
+      );
+    }
 
     const passwordHash = await bcrypt.hash(password, 10);
 
@@ -91,7 +98,7 @@ export async function POST(request: Request) {
         password: passwordHash,
         role: finalRole,
         eventId: targetEventId,
-        counterName: counterName.trim(),
+        counterName: finalRole === "VOLUNTEER" ? normalizedCounter : null,
       },
     });
 
