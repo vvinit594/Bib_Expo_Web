@@ -20,23 +20,22 @@ type Volunteer = {
 
 type EventItem = {
   id: string;
-  name: string;
-  eventDate?: string;
-  participantCount: number;
-  volunteerCount: number;
-  organizerCount: number;
+};
+
+type AuthMeUser = {
+  role: "ADMIN" | "ORGANIZER" | "VOLUNTEER";
+  eventId: string | null;
 };
 
 export default function AdminPage() {
   const router = useRouter();
+  const [roleName, setRoleName] = React.useState<"ADMIN" | "ORGANIZER">("ADMIN");
   const [name, setName] = React.useState("");
   const [phone, setPhone] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [counterName, setCounterName] = React.useState("");
   const [role, setRole] = React.useState<"VOLUNTEER" | "ORGANIZER">("VOLUNTEER");
-  const [events, setEvents] = React.useState<EventItem[]>([]);
   const [activeEventId, setActiveEventId] = React.useState("");
-  const [switchingEvent, setSwitchingEvent] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [showSuccessPopup, setShowSuccessPopup] = React.useState(false);
@@ -53,22 +52,23 @@ export default function AdminPage() {
     () => volunteers.filter((v) => v.role === "ORGANIZER"),
     [volunteers]
   );
+  const isAdmin = roleName === "ADMIN";
+  const isOrganizer = roleName === "ORGANIZER";
   const hasActiveEvent = !!activeEventId;
 
   const fetchEvents = React.useCallback(() => {
+    if (!isAdmin) return;
     fetch("/api/admin/events")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        const list = Array.isArray(data?.events) ? data.events : [];
-        setEvents(list);
+        const list = (Array.isArray(data?.events) ? data.events : []) as EventItem[];
         if (data?.activeEventId) setActiveEventId(data.activeEventId);
         else if (list[0]?.id) setActiveEventId(list[0].id);
       })
       .catch(() => {
-        setEvents([]);
         setActiveEventId("");
       });
-  }, []);
+  }, [isAdmin]);
 
   const fetchVolunteers = React.useCallback(() => {
     setVolunteersLoading(true);
@@ -78,6 +78,29 @@ export default function AdminPage() {
       .catch(() => setVolunteers([]))
       .finally(() => setVolunteersLoading(false));
   }, []);
+
+  const fetchAuth = React.useCallback(() => {
+    fetch("/api/auth/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        const user = (data?.user ?? null) as AuthMeUser | null;
+        if (!user) return;
+        if (user.role === "ADMIN" || user.role === "ORGANIZER") {
+          setRoleName(user.role);
+        } else {
+          router.push("/dashboard");
+        }
+        if (user.role === "ORGANIZER") {
+          setActiveEventId(user.eventId ?? "");
+          setRole("VOLUNTEER");
+        }
+      })
+      .catch(() => {});
+  }, [router]);
+
+  React.useEffect(() => {
+    fetchAuth();
+  }, [fetchAuth]);
 
   React.useEffect(() => {
     fetchEvents();
@@ -105,7 +128,7 @@ export default function AdminPage() {
           phone: phone.trim(),
           password: password,
           counterName: counterName.trim(),
-          role,
+          role: isOrganizer ? "VOLUNTEER" : role,
           eventId: activeEventId,
         }),
       });
@@ -129,29 +152,6 @@ export default function AdminPage() {
       setError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function handleSwitchEvent(nextEventId: string) {
-    setActiveEventId(nextEventId);
-    if (!nextEventId) return;
-    setSwitchingEvent(true);
-    try {
-      const res = await fetch("/api/admin/events/active", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ eventId: nextEventId }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.error ?? "Failed to switch event");
-      } else {
-        router.refresh();
-      }
-    } catch {
-      setError("Failed to switch event");
-    } finally {
-      setSwitchingEvent(false);
     }
   }
 
@@ -186,7 +186,7 @@ export default function AdminPage() {
             </span>
             <div className="flex flex-col">
               <span className="text-sm font-semibold">Bib Expo</span>
-              <span className="text-[0.7rem] text-slate-500">Admin Panel</span>
+              <span className="text-[0.7rem] text-slate-500">{isOrganizer ? "Organizer Panel" : "Admin Panel"}</span>
             </div>
           </Link>
           <div className="flex items-center gap-3">
@@ -212,39 +212,6 @@ export default function AdminPage() {
       </ScrollAwareHeader>
 
       <main className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
-        <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-base font-semibold text-slate-900">Active Event Context</h2>
-          <p className="mt-0.5 text-sm text-slate-500">
-            Select which event to use for volunteer/organizer management.
-          </p>
-          <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
-            <select
-              value={activeEventId}
-              onChange={(e) => handleSwitchEvent(e.target.value)}
-              disabled={switchingEvent || events.length === 0}
-              className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-200 disabled:opacity-60"
-            >
-              <option value="">Select active event</option>
-              {events.map((ev) => (
-                <option key={ev.id} value={ev.id}>
-                  {ev.name}
-                </option>
-              ))}
-            </select>
-            <span className="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs text-slate-600">
-              {switchingEvent ? "Switching..." : "Active Event"}
-            </span>
-          </div>
-          <div className="mt-3">
-            <Link
-              href="/admin/events"
-              className="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-            >
-              Open Event Setup Page
-            </Link>
-          </div>
-        </div>
-
         {!hasActiveEvent && (
           <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             No active event selected. Please choose an event from Event Setup before creating users.
@@ -309,16 +276,25 @@ export default function AdminPage() {
               <label htmlFor="role" className="block text-sm font-medium text-slate-700">
                 Account Type
               </label>
-              <select
-                id="role"
-                value={role}
-                onChange={(e) => setRole(e.target.value as "VOLUNTEER" | "ORGANIZER")}
-                className="mt-1 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-200"
-                disabled={!hasActiveEvent}
-              >
-                <option value="VOLUNTEER">Volunteer</option>
-                <option value="ORGANIZER">Organizer</option>
-              </select>
+              {isAdmin ? (
+                <select
+                  id="role"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as "VOLUNTEER" | "ORGANIZER")}
+                  className="mt-1 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-200"
+                  disabled={!hasActiveEvent}
+                >
+                  <option value="VOLUNTEER">Volunteer</option>
+                  <option value="ORGANIZER">Organizer</option>
+                </select>
+              ) : (
+                <input
+                  id="role"
+                  value="Volunteer"
+                  readOnly
+                  className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700"
+                />
+              )}
             </div>
             <div>
               <label htmlFor="counterName" className="block text-sm font-medium text-slate-700">
@@ -344,7 +320,7 @@ export default function AdminPage() {
               disabled={loading || !activeEventId}
               className="h-11 w-full rounded-xl bg-[#E11D48] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#BE123C] disabled:opacity-60"
             >
-              {loading ? "Creating..." : `Create ${role === "ORGANIZER" ? "Organizer" : "Volunteer"}`}
+              {loading ? "Creating..." : `Create ${isOrganizer ? "Volunteer" : role === "ORGANIZER" ? "Organizer" : "Volunteer"}`}
             </button>
           </form>
         </div>
@@ -449,6 +425,7 @@ export default function AdminPage() {
         </div>
 
         {/* Organizers section */}
+        {isAdmin && (
         <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-base font-semibold text-slate-900">Manage Organizers</h2>
           <p className="mt-0.5 text-sm text-slate-500">
@@ -539,6 +516,7 @@ export default function AdminPage() {
             </>
           )}
         </div>
+        )}
 
         {showSuccessPopup && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">

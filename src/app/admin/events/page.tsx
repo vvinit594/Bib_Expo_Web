@@ -171,7 +171,7 @@ export default function AdminEventSetupPage() {
         )}
 
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-          <h2 className="text-base font-semibold text-slate-900">Option 1: Create New Event</h2>
+          <h2 className="text-base font-semibold text-slate-900">Create New Event</h2>
           <p className="mt-1 text-sm text-slate-600">
             Provide event details and import participants from Excel in one step.
           </p>
@@ -220,7 +220,7 @@ export default function AdminEventSetupPage() {
         </section>
 
         <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-          <h2 className="text-base font-semibold text-slate-900">Option 2: Continue with Existing Event</h2>
+          <h2 className="text-base font-semibold text-slate-900">Continue with Existing Event</h2>
           <p className="mt-1 text-sm text-slate-600">
             Choose an event to open its scoped dashboard and counters.
           </p>
@@ -251,7 +251,7 @@ export default function AdminEventSetupPage() {
                       isActive
                         ? "border-emerald-300 bg-emerald-50"
                         : "border-slate-200 bg-white hover:bg-slate-50"
-                    } ${opening || deleting ? "opacity-80" : ""}`}
+                    } ${opening || deleting ? "opacity-80 cursor-not-allowed" : "cursor-pointer"}`}
                     aria-disabled={opening || deleting}
                   >
                     <div className="flex items-start justify-between gap-2">

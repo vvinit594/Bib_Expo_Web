@@ -3,7 +3,7 @@ import bcrypt from "bcrypt";
 import { z } from "zod";
 
 import { prisma } from "@/lib/db";
-import { requireAdmin } from "@/lib/auth-server";
+import { requireOrganizerOrAdmin } from "@/lib/auth-server";
 
 const createVolunteerSchema = z.object({
   name: z.string().min(1, "Username is required"),
@@ -11,12 +11,13 @@ const createVolunteerSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
   counterName: z.string().min(1, "Counter name is required"),
   role: z.enum(["VOLUNTEER", "ORGANIZER"]).default("VOLUNTEER"),
-  eventId: z.string().uuid("Event is required"),
+  eventId: z.string().uuid("Event is required").optional(),
 });
 
 export async function POST(request: Request) {
+  let auth;
   try {
-    await requireAdmin();
+    auth = await requireOrganizerOrAdmin();
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unauthorized";
     const status = msg === "Forbidden" ? 403 : 401;
@@ -33,6 +34,24 @@ export async function POST(request: Request) {
     }
 
     const { name, phone, password, counterName, role, eventId } = parsed.data;
+    const isOrganizer = auth.role === "ORGANIZER";
+    const targetEventId = isOrganizer ? auth.eventId : eventId;
+
+    if (isOrganizer && !auth.eventId) {
+      return NextResponse.json(
+        { error: "Organizer is not assigned to an event" },
+        { status: 403 }
+      );
+    }
+    if (!targetEventId) {
+      return NextResponse.json({ error: "Event is required" }, { status: 400 });
+    }
+    if (isOrganizer && role !== "VOLUNTEER") {
+      return NextResponse.json(
+        { error: "Organizers can only create volunteer accounts" },
+        { status: 403 }
+      );
+    }
     const normalizedPhone = phone.trim();
 
     const existing = await prisma.volunteer.findUnique({
@@ -54,12 +73,14 @@ export async function POST(request: Request) {
     }
 
     const rows = await prisma.$queryRaw<{ id: string }[]>`
-      SELECT id FROM "ExpoEvent" WHERE id = ${eventId} LIMIT 1
+      SELECT id FROM "ExpoEvent" WHERE id = ${targetEventId} LIMIT 1
     `;
     const event = rows[0] ?? null;
     if (!event) {
       return NextResponse.json({ error: "Selected event does not exist" }, { status: 404 });
     }
+
+    const finalRole = isOrganizer ? "VOLUNTEER" : role;
 
     const passwordHash = await bcrypt.hash(password, 10);
 
@@ -68,8 +89,8 @@ export async function POST(request: Request) {
         name: name.trim(),
         phone: normalizedPhone,
         password: passwordHash,
-        role,
-        eventId,
+        role: finalRole,
+        eventId: targetEventId,
         counterName: counterName.trim(),
       },
     });
@@ -77,7 +98,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         success: true,
-        message: `${role === "ORGANIZER" ? "Organizer" : "Volunteer"} created successfully`,
+        message: `${finalRole === "ORGANIZER" ? "Organizer" : "Volunteer"} created successfully`,
       },
       { status: 201 }
     );

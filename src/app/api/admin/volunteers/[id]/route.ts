@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/db";
-import { requireAdmin } from "@/lib/auth-server";
+import { requireOrganizerOrAdmin } from "@/lib/auth-server";
 
 export async function DELETE(
   _request: Request,
@@ -9,7 +9,7 @@ export async function DELETE(
 ) {
   let auth;
   try {
-    auth = await requireAdmin();
+    auth = await requireOrganizerOrAdmin();
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unauthorized";
     const status = msg === "Forbidden" ? 403 : 401;
@@ -28,6 +28,19 @@ export async function DELETE(
         { error: "User not found" },
         { status: 404 }
       );
+    }
+
+    const isOrganizer = auth.role === "ORGANIZER";
+    if (isOrganizer) {
+      if (!auth.eventId) {
+        return NextResponse.json({ error: "Organizer is not assigned to an event" }, { status: 403 });
+      }
+      if (volunteer.role !== "VOLUNTEER") {
+        return NextResponse.json({ error: "Organizers can delete volunteer accounts only" }, { status: 403 });
+      }
+      if (volunteer.eventId !== auth.eventId) {
+        return NextResponse.json({ error: "You can only manage volunteers from your event" }, { status: 403 });
+      }
     }
 
     // Prevent admin from deleting themselves

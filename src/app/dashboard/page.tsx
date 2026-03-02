@@ -454,6 +454,14 @@ export default function DashboardPage() {
                 </Link>
               </>
             )}
+            {user?.role === "ORGANIZER" && (
+              <Link
+                href="/admin"
+                className="hidden rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 md:inline-flex"
+              >
+                Manage Volunteers
+              </Link>
+            )}
             <div className="hidden items-end gap-2 text-xs md:flex">
               <div className="flex flex-col items-end">
                 <span className="font-medium text-slate-900">
@@ -598,6 +606,19 @@ export default function DashboardPage() {
                             className="flex h-11 items-center rounded-lg px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                           >
                             Manage Users
+                          </Link>
+                        </div>
+                      </div>
+                    )}
+                    {user?.role === "ORGANIZER" && (
+                      <div className="border-b border-slate-100 px-2 py-2">
+                        <div className="mt-1 flex flex-col gap-1">
+                          <Link
+                            href="/admin"
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="flex h-11 items-center rounded-lg px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                          >
+                            Manage Volunteers
                           </Link>
                         </div>
                       </div>

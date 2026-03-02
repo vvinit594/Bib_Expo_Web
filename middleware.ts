@@ -46,7 +46,10 @@ export async function middleware(request: NextRequest) {
       loginUrl.searchParams.set("redirect", pathname);
       return NextResponse.redirect(loginUrl);
     }
-    if (payload.role !== "ADMIN") {
+    if (pathname.startsWith("/admin/events") && payload.role !== "ADMIN") {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+    if (payload.role !== "ADMIN" && payload.role !== "ORGANIZER") {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
     return NextResponse.next();

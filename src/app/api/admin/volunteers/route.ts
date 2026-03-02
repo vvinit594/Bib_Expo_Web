@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/db";
-import { requireAdmin } from "@/lib/auth-server";
+import { requireOrganizerOrAdmin } from "@/lib/auth-server";
 
 export async function GET() {
+  let auth;
   try {
-    await requireAdmin();
+    auth = await requireOrganizerOrAdmin();
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unauthorized";
     const status = msg === "Forbidden" ? 403 : 401;
@@ -13,8 +14,11 @@ export async function GET() {
   }
 
   try {
+    const isOrganizer = auth.role === "ORGANIZER";
     const volunteers = await prisma.volunteer.findMany({
-      where: { role: { in: ["VOLUNTEER", "ORGANIZER"] } },
+      where: isOrganizer
+        ? { role: "VOLUNTEER", eventId: auth.eventId ?? "__none__" }
+        : { role: { in: ["VOLUNTEER", "ORGANIZER"] } },
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -24,11 +28,13 @@ export async function GET() {
         createdAt: true,
         role: true,
         eventId: true,
-        expoEvent: {
-          select: { name: true },
-        },
       },
     });
+
+    const eventRows = await prisma.$queryRaw<{ id: string; name: string }[]>`
+      SELECT id, name FROM "ExpoEvent"
+    `;
+    const eventNameById = new Map(eventRows.map((e) => [e.id, e.name]));
 
     const list = volunteers.map((v) => ({
       id: v.id,
@@ -36,7 +42,7 @@ export async function GET() {
       phone: v.phone,
       role: v.role,
       eventId: v.eventId ?? null,
-      eventName: v.expoEvent?.name ?? "—",
+      eventName: v.eventId ? (eventNameById.get(v.eventId) ?? "—") : "—",
       counterName: v.counterName ?? "—",
       createdAt: v.createdAt.toISOString(),
       status: "Active",
