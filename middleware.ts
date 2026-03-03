@@ -4,7 +4,7 @@ import { jwtVerify } from "jose";
 
 import { AUTH_COOKIE_NAME, ACTIVE_EVENT_COOKIE_NAME } from "@/lib/auth";
 
-const PUBLIC_PATHS = ["/", "/login", "/signup", "/volunteer-login"];
+const PUBLIC_PATHS = ["/", "/login", "/admin-login", "/organizer-login", "/volunteer-login", "/signup"];
 const DASHBOARD_PATHS = ["/dashboard"];
 const ADMIN_PATHS = ["/admin"];
 const UUID_LIKE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -42,7 +42,7 @@ export async function middleware(request: NextRequest) {
   // Admin routes: ADMIN only
   if (ADMIN_PATHS.some((p) => pathname.startsWith(p))) {
     if (!payload) {
-      const loginUrl = new URL("/login", request.url);
+      const loginUrl = new URL("/admin-login", request.url);
       loginUrl.searchParams.set("redirect", pathname);
       return NextResponse.redirect(loginUrl);
     }
@@ -58,7 +58,7 @@ export async function middleware(request: NextRequest) {
   // Dashboard: ADMIN + ORGANIZER + VOLUNTEER
   if (DASHBOARD_PATHS.some((p) => pathname.startsWith(p))) {
     if (!payload) {
-      const loginUrl = new URL("/login", request.url);
+      const loginUrl = new URL("/volunteer-login", request.url);
       loginUrl.searchParams.set("redirect", pathname);
       return NextResponse.redirect(loginUrl);
     }
@@ -100,7 +100,7 @@ export async function middleware(request: NextRequest) {
 
   // Public auth pages: redirect to dashboard if already logged in
   if (
-    ["/login", "/signup", "/volunteer-login"].includes(pathname) &&
+    ["/login", "/admin-login", "/organizer-login", "/volunteer-login", "/signup"].includes(pathname) &&
     payload
   ) {
     const target = payload.role === "ADMIN" ? "/admin/events" : "/dashboard";

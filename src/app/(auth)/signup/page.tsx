@@ -21,14 +21,14 @@ export default function SignupPage() {
 
       <div className="mt-8 space-y-4">
         <Link
-          href="/login"
+          href="/admin-login"
           className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-[#E11D48] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#BE123C]"
         >
           Go to Login
         </Link>
         <p className="text-center text-xs text-[color:var(--muted-foreground)]">
           Already have an account?{" "}
-          <Link href="/login" className="font-semibold text-[color:var(--primary)] hover:underline">
+          <Link href="/admin-login" className="font-semibold text-[color:var(--primary)] hover:underline">
             Sign in
           </Link>
         </p>

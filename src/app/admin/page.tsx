@@ -204,7 +204,7 @@ export default function AdminPage() {
               type="button"
               onClick={async () => {
                 await fetch("/api/auth/logout", { method: "POST" });
-                router.push("/login");
+                router.push("/");
                 router.refresh();
               }}
               className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50"

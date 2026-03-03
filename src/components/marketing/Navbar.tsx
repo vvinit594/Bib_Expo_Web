@@ -30,10 +30,10 @@ export function Navbar() {
         {/* Desktop actions */}
         <div className="hidden items-center gap-3 sm:flex">
           <Link
-            href="/login"
+            href="/admin-login"
             className="inline-flex h-9 items-center justify-center rounded-full border border-white/70 bg-white/90 px-4 text-xs font-medium text-slate-900 shadow-sm transition hover:bg-white"
           >
-            Login
+            Admin Login
           </Link>
           <Link
             href="/signup"
@@ -65,10 +65,10 @@ export function Navbar() {
           <div className="rounded-2xl border border-white/30 bg-white/90 p-3 shadow-lg shadow-slate-900/10 backdrop-blur-md">
           <div className="flex flex-col gap-2">
             <Link
-              href="/login"
+              href="/admin-login"
               className="inline-flex h-11 w-full items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-medium text-slate-900 shadow-sm transition hover:bg-slate-50"
             >
-              Login
+              Admin Login
             </Link>
             <Link
               href="/signup"

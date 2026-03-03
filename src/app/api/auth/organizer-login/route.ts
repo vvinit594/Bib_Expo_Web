@@ -75,8 +75,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Volunteer login only
-    if (volunteer.role !== "VOLUNTEER") {
+    // Organizer login only
+    if (volunteer.role !== "ORGANIZER") {
       return NextResponse.json(
         { error: "Use the appropriate login page for your role." },
         { status: 403 }
@@ -109,7 +109,7 @@ export async function POST(request: Request) {
 
     return response;
   } catch (err) {
-    console.error("Volunteer login error:", err);
+    console.error("Organizer login error:", err);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

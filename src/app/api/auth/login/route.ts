@@ -65,10 +65,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // Admin login only — volunteers must use /volunteer-login
+    // Admin login only
     if (volunteer.role !== "ADMIN") {
       return NextResponse.json(
-        { error: "Use the volunteer login page to sign in." },
+        { error: "Use the appropriate login page for your role." },
         { status: 403 }
       );
     }

@@ -629,7 +629,7 @@ export default function DashboardPage() {
                         onClick={async () => {
                           setMobileMenuOpen(false);
                           await fetch("/api/auth/logout", { method: "POST" });
-                          router.push("/login");
+                          router.push("/");
                           router.refresh();
                         }}
                         className="flex h-11 w-full items-center rounded-lg px-3 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
@@ -646,7 +646,7 @@ export default function DashboardPage() {
               type="button"
               onClick={async () => {
                 await fetch("/api/auth/logout", { method: "POST" });
-                router.push("/login");
+                router.push("/");
                 router.refresh();
               }}
               className="hidden rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 md:inline-flex"

@@ -8,7 +8,7 @@ import { AuthCard } from "@/components/auth/AuthCard";
 import { AuthInput } from "@/components/auth/AuthInput";
 import { PrimaryButton } from "@/components/auth/PrimaryButton";
 
-function VolunteerLoginForm() {
+function OrganizerLoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = React.useState<string | null>(null);
@@ -26,7 +26,6 @@ function VolunteerLoginForm() {
       setError("Phone number and password are required.");
       return;
     }
-
     if (!/^[6-9]\d{9}$/.test(phone)) {
       setError("Enter a valid 10-digit Indian mobile number.");
       return;
@@ -34,14 +33,12 @@ function VolunteerLoginForm() {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/volunteer-login", {
+      const res = await fetch("/api/auth/organizer-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone, password }),
       });
-
       const data = await res.json();
-
       if (!res.ok) {
         setError(data.error ?? "Something went wrong.");
         return;
@@ -62,11 +59,11 @@ function VolunteerLoginForm() {
     <AuthCard>
       <div>
         <p className="text-sm font-semibold tracking-wide text-[color:var(--muted-foreground)]">
-          Volunteer Access
+          Organizer Access
         </p>
-        <h2 className="mt-2 text-2xl font-semibold">Volunteer Login</h2>
+        <h2 className="mt-2 text-2xl font-semibold">Organizer Login</h2>
         <p className="mt-2 text-sm text-[color:var(--muted-foreground)]">
-          Sign in to search participants and mark kit collection status.
+          Sign in to manage volunteers and collections within your assigned event.
         </p>
       </div>
 
@@ -94,17 +91,11 @@ function VolunteerLoginForm() {
             Forgot password? (coming soon)
           </span>
           <div className="flex gap-2 text-xs">
-            <Link
-              href="/organizer-login"
-              className="font-semibold text-[color:var(--primary)] hover:underline"
-            >
-              Organizer login
-            </Link>
-            <Link
-              href="/admin-login"
-              className="font-semibold text-[color:var(--primary)] hover:underline"
-            >
+            <Link href="/admin-login" className="font-semibold text-[color:var(--primary)] hover:underline">
               Admin login
+            </Link>
+            <Link href="/volunteer-login" className="font-semibold text-[color:var(--primary)] hover:underline">
+              Volunteer login
             </Link>
           </div>
         </div>
@@ -117,10 +108,10 @@ function VolunteerLoginForm() {
   );
 }
 
-export default function VolunteerLoginPage() {
+export default function OrganizerLoginPage() {
   return (
     <React.Suspense fallback={<AuthCard><div className="animate-pulse h-64" /></AuthCard>}>
-      <VolunteerLoginForm />
+      <OrganizerLoginForm />
     </React.Suspense>
   );
 }

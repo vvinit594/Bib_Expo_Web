@@ -8,7 +8,7 @@ import { AuthCard } from "@/components/auth/AuthCard";
 import { AuthInput } from "@/components/auth/AuthInput";
 import { PrimaryButton } from "@/components/auth/PrimaryButton";
 
-function VolunteerLoginForm() {
+function AdminLoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = React.useState<string | null>(null);
@@ -34,7 +34,7 @@ function VolunteerLoginForm() {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/volunteer-login", {
+      const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone, password }),
@@ -47,8 +47,7 @@ function VolunteerLoginForm() {
         return;
       }
 
-      const eventRedirect = data?.user?.eventId ? `/dashboard/${data.user.eventId}` : "/dashboard";
-      const redirect = searchParams.get("redirect") ?? eventRedirect;
+      const redirect = searchParams.get("redirect") ?? "/admin/events";
       router.push(redirect);
       router.refresh();
     } catch {
@@ -62,11 +61,11 @@ function VolunteerLoginForm() {
     <AuthCard>
       <div>
         <p className="text-sm font-semibold tracking-wide text-[color:var(--muted-foreground)]">
-          Volunteer Access
+          Admin Access
         </p>
-        <h2 className="mt-2 text-2xl font-semibold">Volunteer Login</h2>
+        <h2 className="mt-2 text-2xl font-semibold">Admin Login</h2>
         <p className="mt-2 text-sm text-[color:var(--muted-foreground)]">
-          Sign in to search participants and mark kit collection status.
+          Sign in to manage events, users, and expo operations.
         </p>
       </div>
 
@@ -94,17 +93,11 @@ function VolunteerLoginForm() {
             Forgot password? (coming soon)
           </span>
           <div className="flex gap-2 text-xs">
-            <Link
-              href="/organizer-login"
-              className="font-semibold text-[color:var(--primary)] hover:underline"
-            >
+            <Link href="/organizer-login" className="font-semibold text-[color:var(--primary)] hover:underline">
               Organizer login
             </Link>
-            <Link
-              href="/admin-login"
-              className="font-semibold text-[color:var(--primary)] hover:underline"
-            >
-              Admin login
+            <Link href="/volunteer-login" className="font-semibold text-[color:var(--primary)] hover:underline">
+              Volunteer login
             </Link>
           </div>
         </div>
@@ -117,10 +110,10 @@ function VolunteerLoginForm() {
   );
 }
 
-export default function VolunteerLoginPage() {
+export default function AdminLoginPage() {
   return (
     <React.Suspense fallback={<AuthCard><div className="animate-pulse h-64" /></AuthCard>}>
-      <VolunteerLoginForm />
+      <AdminLoginForm />
     </React.Suspense>
   );
 }

@@ -27,10 +27,10 @@ export default function Home() {
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
               <Link
-                href="/login"
+                href="/organizer-login"
                 className="inline-flex h-11 items-center justify-center rounded-full bg-[#E11D48] px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-[#BE123C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200"
               >
-                Admin Login
+                Organizer Login
               </Link>
               <Link
                 href="/volunteer-login"
