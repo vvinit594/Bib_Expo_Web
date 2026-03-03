@@ -93,20 +93,12 @@ function VolunteerLoginForm() {
           <span className="text-xs text-[color:var(--muted-foreground)]">
             Forgot password? (coming soon)
           </span>
-          <div className="flex gap-2 text-xs">
-            <Link
-              href="/organizer-login"
-              className="font-semibold text-[color:var(--primary)] hover:underline"
-            >
-              Organizer login
-            </Link>
-            <Link
-              href="/admin-login"
-              className="font-semibold text-[color:var(--primary)] hover:underline"
-            >
-              Admin login
-            </Link>
-          </div>
+          <Link
+            href="/organizer-login"
+            className="font-semibold text-[color:var(--primary)] hover:underline text-xs"
+          >
+            Organizer login
+          </Link>
         </div>
 
         <PrimaryButton type="submit" disabled={loading}>

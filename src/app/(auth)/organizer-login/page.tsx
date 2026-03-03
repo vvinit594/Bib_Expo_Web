@@ -90,14 +90,9 @@ function OrganizerLoginForm() {
           <span className="text-xs text-[color:var(--muted-foreground)]">
             Forgot password? (coming soon)
           </span>
-          <div className="flex gap-2 text-xs">
-            <Link href="/admin-login" className="font-semibold text-[color:var(--primary)] hover:underline">
-              Admin login
-            </Link>
-            <Link href="/volunteer-login" className="font-semibold text-[color:var(--primary)] hover:underline">
-              Volunteer login
-            </Link>
-          </div>
+          <Link href="/volunteer-login" className="font-semibold text-[color:var(--primary)] hover:underline text-xs">
+            Volunteer login
+          </Link>
         </div>
 
         <PrimaryButton type="submit" disabled={loading}>

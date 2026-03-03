@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { AuthCard } from "@/components/auth/AuthCard";
@@ -88,19 +87,9 @@ function AdminLoginForm() {
           error={error ?? undefined}
         />
 
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-[color:var(--muted-foreground)]">
-            Forgot password? (coming soon)
-          </span>
-          <div className="flex gap-2 text-xs">
-            <Link href="/organizer-login" className="font-semibold text-[color:var(--primary)] hover:underline">
-              Organizer login
-            </Link>
-            <Link href="/volunteer-login" className="font-semibold text-[color:var(--primary)] hover:underline">
-              Volunteer login
-            </Link>
-          </div>
-        </div>
+        <span className="text-xs text-[color:var(--muted-foreground)]">
+          Forgot password? (coming soon)
+        </span>
 
         <PrimaryButton type="submit" disabled={loading}>
           {loading ? "Logging in..." : "Login"}

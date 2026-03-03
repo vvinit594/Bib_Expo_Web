@@ -145,23 +145,21 @@ export default function DashboardPage() {
   const selectedCount = selectedIds.size;
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
-  async function fetchParticipants() {
+  const fetchParticipants = React.useCallback(() => {
     setLoading(true);
-    try {
-      const q = query.trim() ? `?q=${encodeURIComponent(query)}` : "";
-      const res = await fetch(`/api/participants${q}`);
-      const data = await res.json();
-      if (res.ok && Array.isArray(data.participants)) {
-        setParticipants(data.participants);
-      } else {
-        setParticipants([]);
-      }
-    } catch {
-      setParticipants([]);
-    } finally {
-      setLoading(false);
-    }
-  }
+    const q = query.trim() ? `?q=${encodeURIComponent(query)}` : "";
+    fetch(`/api/participants${q}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data?.participants)) {
+          setParticipants(data.participants);
+        } else {
+          setParticipants([]);
+        }
+      })
+      .catch(() => setParticipants([]))
+      .finally(() => setLoading(false));
+  }, [query]);
 
   React.useEffect(() => {
     fetch("/api/auth/me")
@@ -171,9 +169,9 @@ export default function DashboardPage() {
   }, []);
 
   React.useEffect(() => {
-    const t = setTimeout(() => fetchParticipants(), 300);
+    const t = setTimeout(fetchParticipants, 300);
     return () => clearTimeout(t);
-  }, [query]);
+  }, [fetchParticipants]);
 
   React.useEffect(() => {
     fetch("/api/participants/stats")

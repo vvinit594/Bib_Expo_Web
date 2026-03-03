@@ -4,7 +4,6 @@ import { jwtVerify } from "jose";
 
 import { AUTH_COOKIE_NAME, ACTIVE_EVENT_COOKIE_NAME } from "@/lib/auth";
 
-const PUBLIC_PATHS = ["/", "/login", "/admin-login", "/organizer-login", "/volunteer-login", "/signup"];
 const DASHBOARD_PATHS = ["/dashboard"];
 const ADMIN_PATHS = ["/admin"];
 const UUID_LIKE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
