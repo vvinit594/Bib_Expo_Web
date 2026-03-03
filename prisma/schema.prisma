@@ -52,6 +52,7 @@ model Participant {
   phone                  String?
   category               String?
   groupName              String?
+  bulkTeam               String?
   age                    String?
   gender                 String?
   tShirtSize             String?
@@ -106,6 +107,18 @@ model CollectionRevertLog {
   createdAt           DateTime @default(now())
 
   @@index([participantId])
+  @@index([eventId])
+  @@index([createdAt])
+}
+
+model BulkTeamCollectionLog {
+  id               String   @id @default(uuid())
+  eventId          String?
+  teamName         String
+  collectedBy      String
+  participantCount Int
+  createdAt        DateTime @default(now())
+
   @@index([eventId])
   @@index([createdAt])
 }

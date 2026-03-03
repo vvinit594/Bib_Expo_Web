@@ -34,7 +34,7 @@ export async function GET() {
         ? adminEventId ? { eventId: adminEventId } : {}
         : { eventId: auth.eventId };
 
-    const [collectedRows, revertedRows] = await Promise.all([
+    const [collectedRows, revertedRows, bulkTeamLogs] = await Promise.all([
       prisma.participant.findMany({
         where: {
           ...eventFilter,
@@ -64,6 +64,18 @@ export async function GET() {
           createdAt: true,
         },
       }),
+      prisma.bulkTeamCollectionLog.findMany({
+        where: eventFilter,
+        orderBy: { createdAt: "desc" },
+        take: 20,
+        select: {
+          id: true,
+          teamName: true,
+          collectedBy: true,
+          participantCount: true,
+          createdAt: true,
+        },
+      }),
     ]);
 
     const collected: ActivityItem[] = collectedRows
@@ -71,7 +83,9 @@ export async function GET() {
       .map((row) => {
         let modeText = "Collected";
         if (row.collectionMethod === "SELF") modeText = "Self";
-        else if (row.collectionMethod === "BEHALF" && row.collectedByName) {
+        else if (row.collectionMethod === "BULK_TEAM" && row.collectedByName) {
+          modeText = `Bulk Team (${row.collectedByName})`;
+        } else if (row.collectionMethod === "BEHALF" && row.collectedByName) {
           modeText = `Behalf (${row.collectedByName})`;
         } else if (row.collectionMethod === "BULK" && row.collectedByName) {
           modeText = `Bulk (${row.collectedByName})`;
@@ -97,7 +111,17 @@ export async function GET() {
       ts: row.createdAt.getTime(),
     }));
 
-    const activities = [...collected, ...reverted]
+    const bulkTeam: ActivityItem[] = bulkTeamLogs.map((row) => ({
+      id: `bulk-team-${row.id}`,
+      text: `${row.teamName} – Bulk Collected by ${row.collectedBy} (${row.participantCount} participants)`,
+      time: row.createdAt.toLocaleTimeString("en-IN", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      ts: row.createdAt.getTime(),
+    }));
+
+    const activities = [...collected, ...bulkTeam, ...reverted]
       .sort((a, b) => b.ts - a.ts)
       .slice(0, 20)
       .map((item) => ({

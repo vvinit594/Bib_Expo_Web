@@ -28,12 +28,43 @@ export async function GET() {
         ? adminEventId ? { eventId: adminEventId } : {}
         : { eventId: auth.eventId };
 
-    const [total, collectedSelf, pending, collectedBehalf, onSpot] = await Promise.all([
+    const bulkFilter = { ...eventFilter, bulkTeam: { not: null } };
+    const individualFilter = { ...eventFilter, OR: [{ bulkTeam: null }, { bulkTeam: "" }] };
+
+    const [
+      total,
+      collectedSelf,
+      pending,
+      collectedBehalf,
+      onSpot,
+      bulkTotal,
+      bulkCollected,
+      bulkPending,
+      individualTotal,
+      individualCollected,
+      individualPending,
+    ] = await Promise.all([
       prisma.participant.count({ where: eventFilter }),
       prisma.participant.count({ where: { ...eventFilter, collectionStatus: "Collected" } }),
       prisma.participant.count({ where: { ...eventFilter, collectionStatus: "Pending" } }),
       prisma.participant.count({ where: { ...eventFilter, collectionStatus: "Collected_By_Behalf" } }),
       prisma.participant.count({ where: { ...eventFilter, source: "ON_SPOT" } }),
+      prisma.participant.count({ where: bulkFilter }),
+      prisma.participant.count({
+        where: {
+          ...bulkFilter,
+          collectionStatus: { in: ["Collected", "Collected_By_Behalf"] },
+        },
+      }),
+      prisma.participant.count({ where: { ...bulkFilter, collectionStatus: "Pending" } }),
+      prisma.participant.count({ where: individualFilter }),
+      prisma.participant.count({
+        where: {
+          ...individualFilter,
+          collectionStatus: { in: ["Collected", "Collected_By_Behalf"] },
+        },
+      }),
+      prisma.participant.count({ where: { ...individualFilter, collectionStatus: "Pending" } }),
     ]);
 
     return NextResponse.json({
@@ -41,6 +72,12 @@ export async function GET() {
       collected: collectedSelf + collectedBehalf,
       pending,
       onSpot,
+      bulkTotal,
+      bulkCollected,
+      bulkPending,
+      individualTotal,
+      individualCollected,
+      individualPending,
     });
   } catch (err) {
     console.error("Stats error:", err);

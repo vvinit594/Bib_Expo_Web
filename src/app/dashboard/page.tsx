@@ -22,6 +22,7 @@ type Participant = {
   status: ParticipantStatus;
   collectionStatus: "Pending" | "Collected" | "Collected_By_Behalf";
   group?: string;
+  bulkTeam?: string;
   registeredOn: string;
   emailVerified: boolean;
   paymentStatus: "paid" | "pending";
@@ -65,6 +66,12 @@ export default function DashboardPage() {
     collected: number;
     pending: number;
     onSpot: number;
+    bulkTotal?: number;
+    bulkCollected?: number;
+    bulkPending?: number;
+    individualTotal?: number;
+    individualCollected?: number;
+    individualPending?: number;
   } | null>(null);
   const [behalfForm, setBehalfForm] = React.useState({
     name: "",
@@ -73,6 +80,8 @@ export default function DashboardPage() {
   });
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
   const [showBulkModal, setShowBulkModal] = React.useState(false);
+  const [selectedTeam, setSelectedTeam] = React.useState<string | null>(null);
+  const [bulkTeamDropdownOpen, setBulkTeamDropdownOpen] = React.useState(false);
   const [bulkForm, setBulkForm] = React.useState({
     name: "",
     contact: "",
@@ -145,6 +154,34 @@ export default function DashboardPage() {
   };
   const selectedCount = selectedIds.size;
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+
+  const uniqueTeams = React.useMemo(() => {
+    const teams = new Set<string>();
+    for (const p of participants) {
+      if (p.bulkTeam?.trim()) teams.add(p.bulkTeam.trim());
+    }
+    return Array.from(teams).sort();
+  }, [participants]);
+
+  const selectTeam = React.useCallback(
+    (teamName: string) => {
+      const ids = new Set(
+        participants
+          .filter((p) => p.bulkTeam === teamName && isPending(p))
+          .map((p) => p.id)
+      );
+      setSelectedIds(ids);
+      setSelectedTeam(teamName);
+      setBulkTeamDropdownOpen(false);
+    },
+    [participants]
+  );
+
+  const clearTeamSelection = React.useCallback(() => {
+    setSelectedTeam(null);
+    setSelectedIds(new Set());
+  }, []);
+
 
   const fetchParticipants = React.useCallback(() => {
     setLoading(true);
@@ -267,6 +304,7 @@ export default function DashboardPage() {
       if (res.ok) {
         setBulkSuccessMessage(data.message ?? "Bulk collection completed successfully.");
         setSelectedIds(new Set());
+        setSelectedTeam(null);
         setShowBulkModal(false);
         setBulkForm({ name: "", contact: "", relation: "", idProof: "" });
         fetchParticipants();
@@ -758,6 +796,47 @@ export default function DashboardPage() {
                 matches
               </span>
               <div className="flex flex-wrap items-center gap-2">
+                {uniqueTeams.length > 0 && (
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setBulkTeamDropdownOpen((o) => !o)}
+                      className="inline-flex h-9 items-center justify-center rounded-full border border-sky-200 bg-sky-50 px-4 text-[0.75rem] font-semibold text-sky-800 shadow-sm transition hover:bg-sky-100"
+                    >
+                      📦 Bulk Team
+                    </button>
+                    {bulkTeamDropdownOpen && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-40"
+                          aria-hidden="true"
+                          onClick={() => setBulkTeamDropdownOpen(false)}
+                        />
+                        <div className="absolute left-0 top-full z-50 mt-1 max-h-48 w-48 overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-xl">
+                          {uniqueTeams.map((team) => (
+                            <button
+                              key={team}
+                              type="button"
+                              onClick={() => selectTeam(team)}
+                              className="flex w-full items-center px-3 py-2 text-left text-[0.75rem] text-slate-700 hover:bg-slate-50"
+                            >
+                              {team}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+                {selectedTeam && (
+                  <button
+                    type="button"
+                    onClick={clearTeamSelection}
+                    className="inline-flex h-9 items-center justify-center rounded-full border border-slate-200 bg-white px-3 text-[0.75rem] font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+                  >
+                    Clear Team
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setShowBulkModal(true)}
@@ -766,7 +845,7 @@ export default function DashboardPage() {
                 >
                   🔴 Bulk Collection{selectedCount > 0 ? ` (${selectedCount})` : ""}
                 </button>
-                {selectedCount > 0 && (
+                {selectedCount > 0 && !selectedTeam && (
                   <button
                     type="button"
                     onClick={() => setSelectedIds(new Set())}
@@ -790,7 +869,11 @@ export default function DashboardPage() {
               {filtered.map((p) => (
                 <article
                   key={p.id}
-                  className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm sm:px-4 sm:py-4"
+                  className={`flex flex-col gap-3 rounded-2xl border px-3 py-3 text-sm shadow-sm sm:px-4 sm:py-4 ${
+                    selectedTeam && p.bulkTeam === selectedTeam
+                      ? "border-sky-400 bg-sky-50/50 ring-2 ring-sky-200"
+                      : "border-slate-200 bg-white"
+                  }`}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
@@ -803,9 +886,17 @@ export default function DashboardPage() {
                           {p.category}
                         </span>
                       </div>
-                      {p.group ? (
-                        <p className="mt-1 text-[0.7rem] text-slate-500">Group: {p.group}</p>
-                      ) : null}
+                      {(p.group || p.bulkTeam) && (
+                        <p className="mt-1 text-[0.7rem] text-slate-500">
+                          {p.bulkTeam && (
+                            <span className="rounded bg-sky-100 px-1.5 py-0.5 font-medium text-sky-700">
+                              {p.bulkTeam}
+                            </span>
+                          )}
+                          {p.bulkTeam && p.group && " · "}
+                          {p.group && `Group: ${p.group}`}
+                        </p>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <span
@@ -876,10 +967,12 @@ export default function DashboardPage() {
                   </div>
 
                   <div className="flex flex-col gap-2 pt-1 text-[0.75rem] sm:flex-row sm:items-center sm:justify-between">
-                    {p.group ? (
-                      <button className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1.5 text-[0.7rem] font-semibold text-white shadow-sm transition hover:bg-slate-800">
-                        📦 Collect Entire Group
-                      </button>
+                    {p.bulkTeam ? (
+                      <span className="text-[0.7rem] text-slate-500">
+                        Bulk team: {p.bulkTeam}
+                      </span>
+                    ) : p.group ? (
+                      <span className="text-[0.7rem] text-slate-500">Group: {p.group}</span>
                     ) : (
                       <span className="text-[0.7rem] text-slate-500">
                         Single participant record
@@ -996,6 +1089,46 @@ export default function DashboardPage() {
                 <dd className="text-sm font-semibold text-sky-300">{stats?.onSpot ?? "—"}</dd>
               </div>
             </dl>
+            {(stats?.bulkTotal ?? 0) > 0 && (
+              <div className="mt-4 border-t border-slate-700/50 pt-4">
+                <p className="mb-2 text-[0.7rem] font-medium uppercase tracking-wide text-slate-400">
+                  Bulk Participants
+                </p>
+                <dl className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <dt className="text-slate-400">Total</dt>
+                    <dd className="text-sm font-semibold text-white">{stats.bulkTotal}</dd>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <dt className="text-slate-400">Collected</dt>
+                    <dd className="text-sm font-semibold text-emerald-400">{stats.bulkCollected ?? "—"}</dd>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <dt className="text-slate-400">Pending</dt>
+                    <dd className="text-sm font-semibold text-amber-300">{stats.bulkPending ?? "—"}</dd>
+                  </div>
+                </dl>
+              </div>
+            )}
+            <div className="mt-4 border-t border-slate-700/50 pt-4">
+              <p className="mb-2 text-[0.7rem] font-medium uppercase tracking-wide text-slate-400">
+                Individual Participants
+              </p>
+              <dl className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <dt className="text-slate-400">Total</dt>
+                  <dd className="text-sm font-semibold text-white">{stats?.individualTotal ?? "—"}</dd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <dt className="text-slate-400">Collected</dt>
+                  <dd className="text-sm font-semibold text-emerald-400">{stats?.individualCollected ?? "—"}</dd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <dt className="text-slate-400">Pending</dt>
+                  <dd className="text-sm font-semibold text-amber-300">{stats?.individualPending ?? "—"}</dd>
+                </div>
+              </dl>
+            </div>
           </div>
 
           <div className="hidden rounded-2xl bg-white p-4 text-[0.75rem] text-slate-600 shadow-sm shadow-slate-900/5 ring-1 ring-slate-200 lg:block">
@@ -1063,6 +1196,46 @@ export default function DashboardPage() {
                     <dd className="text-sm font-semibold text-sky-300">{stats?.onSpot ?? "—"}</dd>
                   </div>
                 </dl>
+                {(stats?.bulkTotal ?? 0) > 0 && (
+                  <div className="mt-4 border-t border-slate-700/50 pt-4">
+                    <p className="mb-2 text-[0.7rem] font-medium uppercase tracking-wide text-slate-400">
+                      Bulk Participants
+                    </p>
+                    <dl className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <dt className="text-slate-400">Total</dt>
+                        <dd className="text-sm font-semibold text-white">{stats.bulkTotal}</dd>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <dt className="text-slate-400">Collected</dt>
+                        <dd className="text-sm font-semibold text-emerald-400">{stats.bulkCollected ?? "—"}</dd>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <dt className="text-slate-400">Pending</dt>
+                        <dd className="text-sm font-semibold text-amber-300">{stats.bulkPending ?? "—"}</dd>
+                      </div>
+                    </dl>
+                  </div>
+                )}
+                <div className="mt-4 border-t border-slate-700/50 pt-4">
+                  <p className="mb-2 text-[0.7rem] font-medium uppercase tracking-wide text-slate-400">
+                    Individual Participants
+                  </p>
+                  <dl className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <dt className="text-slate-400">Total</dt>
+                      <dd className="text-sm font-semibold text-white">{stats?.individualTotal ?? "—"}</dd>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <dt className="text-slate-400">Collected</dt>
+                      <dd className="text-sm font-semibold text-emerald-400">{stats?.individualCollected ?? "—"}</dd>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <dt className="text-slate-400">Pending</dt>
+                      <dd className="text-sm font-semibold text-amber-300">{stats?.individualPending ?? "—"}</dd>
+                    </div>
+                  </dl>
+                </div>
               </div>
               <div className="space-y-3 rounded-2xl bg-white p-4 shadow-sm shadow-slate-900/5 ring-1 ring-slate-200">
                 <div className="flex items-center justify-between text-sm">
@@ -1185,7 +1358,7 @@ export default function DashboardPage() {
                   disabled={bulkCollecting || selectedCount === 0 || !bulkForm.name.trim()}
                   className="inline-flex h-8 items-center justify-center rounded-full bg-[#E11D48] px-4 font-semibold text-white shadow-sm hover:bg-[#BE123C] disabled:opacity-60"
                 >
-                  {bulkCollecting ? "Marking..." : "Confirm bulk collection"}
+                  {bulkCollecting ? "Marking..." : "Confirm Bulk Collection"}
                 </button>
               </div>
             </form>

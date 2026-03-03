@@ -15,6 +15,7 @@ const COL_ALIASES: Record<string, string[]> = {
   phone: ["phone", "mobile", "contact", "phone number", "telephone", "phone #"],
   category: ["category", "event", "race", "distance", "event category"],
   group: ["group", "group name", "team", "team name"],
+  bulk: ["bulk"],
   paymentStatus: ["payment status", "payment", "paid", "status"],
   age: ["age"],
   gender: ["gender", "sex"],
@@ -27,6 +28,7 @@ type ParsedRow = {
   phone: string | null;
   category: string | null;
   groupName: string | null;
+  bulkTeam: string | null;
   paymentStatus: string;
   age: string | null;
   gender: string | null;
@@ -66,12 +68,14 @@ function parseRow(row: unknown[], colMap: Record<string, number>): ParsedRow | n
   const paymentStatus =
     pay.includes("paid") || pay === "yes" || pay === "1" ? "paid" : "pending";
 
+  const bulkVal = get("bulk").trim();
   return {
     name,
     email: get("email") || null,
     phone: get("phone") || null,
     category: get("category") || null,
     groupName: get("group") || null,
+    bulkTeam: bulkVal || null,
     paymentStatus,
     age: get("age") || null,
     gender: get("gender") || null,
@@ -180,6 +184,7 @@ export async function POST(request: Request) {
         phone: p.phone,
         category: p.category,
         groupName: p.groupName,
+        bulkTeam: p.bulkTeam,
         age: p.age,
         gender: p.gender,
         tShirtSize: p.tShirtSize,

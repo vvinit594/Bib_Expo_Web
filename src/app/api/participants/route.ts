@@ -74,7 +74,9 @@ export async function GET(request: Request) {
       let collectedBy: string | undefined;
       if (p.collectionStatus !== "Pending" && p.collectedByName) {
         // Prefer the new collectionMethod field when present
-        if (p.collectionMethod === "BULK") {
+        if (p.collectionMethod === "BULK_TEAM" && p.collectedByName) {
+          collectedBy = `Bulk Team (${p.collectedByName})`;
+        } else if (p.collectionMethod === "BULK") {
           collectedBy = `Bulk (${p.collectedByName})`;
         } else if (p.collectionMethod === "BEHALF") {
           collectedBy = `Behalf (${p.collectedByName})`;
@@ -103,6 +105,7 @@ export async function GET(request: Request) {
         status,
         collectionStatus: p.collectionStatus,
         group: p.groupName ?? undefined,
+        bulkTeam: p.bulkTeam ?? undefined,
         registeredOn: p.registeredOn ?? "",
         emailVerified: p.emailVerified,
         paymentStatus: p.paymentStatus,
