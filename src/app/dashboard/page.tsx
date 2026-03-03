@@ -90,6 +90,7 @@ export default function DashboardPage() {
   const [mobileEventMenuOpen, setMobileEventMenuOpen] = React.useState(false);
   const [volunteerCount, setVolunteerCount] = React.useState<number | null>(null);
   const [activities, setActivities] = React.useState<ActivityItem[]>([]);
+  const [statsDrawerOpen, setStatsDrawerOpen] = React.useState(false);
 
   const isAdmin = user?.role === "ADMIN";
   const activeEventName = React.useMemo(
@@ -450,6 +451,12 @@ export default function DashboardPage() {
                 >
                   Manage Users
                 </Link>
+                <Link
+                  href="/admin/export"
+                  className="hidden rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 md:inline-flex"
+                >
+                  Export Excel
+                </Link>
               </>
             )}
             {user?.role === "ORGANIZER" && (
@@ -474,8 +481,18 @@ export default function DashboardPage() {
               </span>
             </div>
 
-            {/* Mobile/tablet: menu toggle + dropdown */}
-            <div className="relative md:hidden">
+            {/* Mobile/tablet: Stats button + menu toggle + dropdown */}
+            <div className="relative flex items-center gap-2 md:hidden">
+              <button
+                type="button"
+                onClick={() => setStatsDrawerOpen(true)}
+                className="inline-flex size-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50"
+                aria-label="Expo Insights"
+              >
+                <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </button>
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen((o) => !o)}
@@ -604,6 +621,13 @@ export default function DashboardPage() {
                             className="flex h-11 items-center rounded-lg px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                           >
                             Manage Users
+                          </Link>
+                          <Link
+                            href="/admin/export"
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="flex h-11 items-center rounded-lg px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                          >
+                            Export Excel
                           </Link>
                         </div>
                       </div>
@@ -927,8 +951,8 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Activity feed */}
-          <div className="space-y-3 rounded-2xl bg-white p-4 shadow-sm shadow-slate-900/5 ring-1 ring-slate-200 sm:p-5">
+          {/* Activity feed (hidden on mobile; shown in Stats drawer) */}
+          <div className="hidden space-y-3 rounded-2xl bg-white p-4 shadow-sm shadow-slate-900/5 ring-1 ring-slate-200 sm:p-5 md:block">
             <div className="flex items-center justify-between text-sm">
               <h2 className="font-semibold text-slate-900">Recent Activity</h2>
               <span className="text-[0.7rem] text-slate-500">Last 20 actions</span>
@@ -947,8 +971,8 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        {/* Right stats panel (desktop) */}
-        <aside className="w-full shrink-0 space-y-4 lg:w-72">
+        {/* Right stats panel (hidden on mobile; shown in Stats drawer) */}
+        <aside className="hidden w-full shrink-0 space-y-4 md:block lg:w-72">
           <div className="rounded-2xl bg-slate-900 px-4 py-4 text-xs text-slate-100 shadow-lg shadow-slate-900/30 sm:px-5 sm:py-5">
             <h2 className="text-sm font-semibold">Live Expo Stats</h2>
             <p className="mt-1 text-[0.7rem] text-slate-300">
@@ -984,6 +1008,83 @@ export default function DashboardPage() {
           </div>
         </aside>
       </main>
+
+      {/* Mobile: Expo Insights bottom sheet */}
+      {statsDrawerOpen && (
+        <div
+          className="fixed inset-0 z-[60] md:hidden"
+          aria-modal="true"
+          role="dialog"
+          aria-label="Expo Insights"
+        >
+          <div
+            className="absolute inset-0 bg-slate-900/50 backdrop-blur-[2px]"
+            onClick={() => setStatsDrawerOpen(false)}
+            aria-hidden="true"
+          />
+          <div
+            className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl bg-white shadow-2xl shadow-slate-900/30 animate-in slide-in-from-bottom duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
+              <h2 className="text-base font-semibold text-slate-900">Expo Insights</h2>
+              <button
+                type="button"
+                onClick={() => setStatsDrawerOpen(false)}
+                className="inline-flex size-9 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Close"
+              >
+                <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="space-y-4 p-4">
+              <div className="rounded-2xl bg-slate-900 px-4 py-4 text-xs text-slate-100 shadow-lg shadow-slate-900/30">
+                <h3 className="text-sm font-semibold">Live Expo Stats</h3>
+                <p className="mt-1 text-[0.7rem] text-slate-300">
+                  Updated automatically as volunteers mark collections.
+                </p>
+                <dl className="mt-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <dt className="text-slate-300">Total Participants</dt>
+                    <dd className="text-sm font-semibold text-white">{stats?.total ?? "—"}</dd>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <dt className="text-slate-300">Collected</dt>
+                    <dd className="text-sm font-semibold text-emerald-400">{stats?.collected ?? "—"}</dd>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <dt className="text-slate-300">Pending</dt>
+                    <dd className="text-sm font-semibold text-amber-300">{stats?.pending ?? "—"}</dd>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <dt className="text-slate-300">On-spot</dt>
+                    <dd className="text-sm font-semibold text-sky-300">{stats?.onSpot ?? "—"}</dd>
+                  </div>
+                </dl>
+              </div>
+              <div className="space-y-3 rounded-2xl bg-white p-4 shadow-sm shadow-slate-900/5 ring-1 ring-slate-200">
+                <div className="flex items-center justify-between text-sm">
+                  <h3 className="font-semibold text-slate-900">Recent Activity</h3>
+                  <span className="text-[0.7rem] text-slate-500">Last 20 actions</span>
+                </div>
+                <ul className="divide-y divide-slate-100 text-[0.75rem]">
+                  {activities.map((a) => (
+                    <li key={a.id} className="flex items-center justify-between py-2.5">
+                      <span className="text-slate-700">{a.text}</span>
+                      <span className="text-slate-400">{a.time}</span>
+                    </li>
+                  ))}
+                  {activities.length === 0 && (
+                    <li className="py-4 text-center text-slate-500">No collection activity yet</li>
+                  )}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Undo confirmation modal */}
       {undoConfirmFor && (
