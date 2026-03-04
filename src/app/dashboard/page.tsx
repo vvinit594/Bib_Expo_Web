@@ -1338,39 +1338,39 @@ export default function DashboardPage() {
               Select items to collect for {showKitModalFor.name} {showKitModalFor.bib}
             </p>
             <div className="mt-4 space-y-3">
-              <label className={`flex items-center gap-3 rounded-lg border border-slate-200 p-3 ${showKitModalFor.bibCollected ? "cursor-default bg-slate-50" : "cursor-pointer hover:bg-slate-50"}`}>
+              <label className={`flex items-center gap-3 rounded-lg border p-3 ${showKitModalFor.bibCollected ? "cursor-default border-emerald-200 bg-emerald-50" : "cursor-pointer border-slate-200 hover:bg-slate-50"}`}>
                 <input
                   type="checkbox"
                   checked={!!showKitModalFor.bibCollected || kitForm.bib}
                   onChange={(e) => setKitForm((f) => ({ ...f, bib: e.target.checked }))}
                   disabled={!!showKitModalFor.bibCollected}
-                  className="size-4 rounded border-slate-300 text-[#E11D48] focus:ring-[#E11D48] disabled:opacity-70"
+                  className="size-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 disabled:opacity-70"
                 />
-                <span className="text-sm font-medium text-slate-700">
+                <span className={`text-sm font-medium ${showKitModalFor.bibCollected ? "text-emerald-700" : "text-slate-700"}`}>
                   {showKitModalFor.bibCollected ? "Bib: Already Collected ✓" : "☐ Bib Collect"}
                 </span>
               </label>
-              <label className={`flex items-center gap-3 rounded-lg border border-slate-200 p-3 ${showKitModalFor.tshirtCollected ? "cursor-default bg-slate-50" : "cursor-pointer hover:bg-slate-50"}`}>
+              <label className={`flex items-center gap-3 rounded-lg border p-3 ${showKitModalFor.tshirtCollected ? "cursor-default border-emerald-200 bg-emerald-50" : "cursor-pointer border-slate-200 hover:bg-slate-50"}`}>
                 <input
                   type="checkbox"
                   checked={!!showKitModalFor.tshirtCollected || kitForm.tshirt}
                   onChange={(e) => setKitForm((f) => ({ ...f, tshirt: e.target.checked }))}
                   disabled={!!showKitModalFor.tshirtCollected}
-                  className="size-4 rounded border-slate-300 text-[#E11D48] focus:ring-[#E11D48] disabled:opacity-70"
+                  className="size-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 disabled:opacity-70"
                 />
-                <span className="text-sm font-medium text-slate-700">
+                <span className={`text-sm font-medium ${showKitModalFor.tshirtCollected ? "text-emerald-700" : "text-slate-700"}`}>
                   {showKitModalFor.tshirtCollected ? "T-Shirt: Already Collected ✓" : "☐ T-Shirt Collect"}
                 </span>
               </label>
-              <label className={`flex items-center gap-3 rounded-lg border border-slate-200 p-3 ${showKitModalFor.goodiesCollected ? "cursor-default bg-slate-50" : "cursor-pointer hover:bg-slate-50"}`}>
+              <label className={`flex items-center gap-3 rounded-lg border p-3 ${showKitModalFor.goodiesCollected ? "cursor-default border-emerald-200 bg-emerald-50" : "cursor-pointer border-slate-200 hover:bg-slate-50"}`}>
                 <input
                   type="checkbox"
                   checked={!!showKitModalFor.goodiesCollected || kitForm.goodies}
                   onChange={(e) => setKitForm((f) => ({ ...f, goodies: e.target.checked }))}
                   disabled={!!showKitModalFor.goodiesCollected}
-                  className="size-4 rounded border-slate-300 text-[#E11D48] focus:ring-[#E11D48] disabled:opacity-70"
+                  className="size-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 disabled:opacity-70"
                 />
-                <span className="text-sm font-medium text-slate-700">
+                <span className={`text-sm font-medium ${showKitModalFor.goodiesCollected ? "text-emerald-700" : "text-slate-700"}`}>
                   {showKitModalFor.goodiesCollected ? "Goodies: Already Collected ✓" : "☐ Goodies Collect"}
                 </span>
               </label>
