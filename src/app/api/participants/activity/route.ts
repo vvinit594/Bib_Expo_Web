@@ -34,7 +34,7 @@ export async function GET() {
         ? adminEventId ? { eventId: adminEventId } : {}
         : { eventId: auth.eventId };
 
-    const [collectedRows, revertedRows, bulkTeamLogs] = await Promise.all([
+    const [collectedRows, revertedRows, bulkTeamLogs, kitLogs] = await Promise.all([
       prisma.participant.findMany({
         where: {
           ...eventFilter,
@@ -73,6 +73,20 @@ export async function GET() {
           teamName: true,
           collectedBy: true,
           participantCount: true,
+          createdAt: true,
+        },
+      }),
+      prisma.kitCollectionLog.findMany({
+        where: eventFilter,
+        orderBy: { createdAt: "desc" },
+        take: 40,
+        select: {
+          id: true,
+          bibNumber: true,
+          participantName: true,
+          itemType: true,
+          collectedBy: true,
+          counterName: true,
           createdAt: true,
         },
       }),
@@ -121,7 +135,19 @@ export async function GET() {
       ts: row.createdAt.getTime(),
     }));
 
-    const activities = [...collected, ...bulkTeam, ...reverted]
+    const itemLabel = (t: string) =>
+      t === "bib" ? "Bib" : t === "tshirt" ? "T-shirt" : "Goodies";
+    const kitCollection: ActivityItem[] = kitLogs.map((row) => ({
+      id: `kit-${row.id}`,
+      text: `${itemLabel(row.itemType)} collected for #${row.bibNumber} by ${row.counterName || row.collectedBy}`,
+      time: row.createdAt.toLocaleTimeString("en-IN", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      ts: row.createdAt.getTime(),
+    }));
+
+    const activities = [...collected, ...bulkTeam, ...kitCollection, ...reverted]
       .sort((a, b) => b.ts - a.ts)
       .slice(0, 20)
       .map((item) => ({

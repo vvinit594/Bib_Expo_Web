@@ -34,8 +34,8 @@ export async function GET() {
     const [
       total,
       collectedSelf,
-      pending,
       collectedBehalf,
+      pending,
       onSpot,
       bulkTotal,
       bulkCollected,
@@ -45,26 +45,73 @@ export async function GET() {
       individualPending,
     ] = await Promise.all([
       prisma.participant.count({ where: eventFilter }),
-      prisma.participant.count({ where: { ...eventFilter, collectionStatus: "Collected" } }),
-      prisma.participant.count({ where: { ...eventFilter, collectionStatus: "Pending" } }),
-      prisma.participant.count({ where: { ...eventFilter, collectionStatus: "Collected_By_Behalf" } }),
+      prisma.participant.count({
+        where: {
+          ...eventFilter,
+          bibCollected: true,
+          tshirtCollected: true,
+          goodiesCollected: true,
+          collectionStatus: "Collected",
+        },
+      }),
+      prisma.participant.count({
+        where: {
+          ...eventFilter,
+          bibCollected: true,
+          tshirtCollected: true,
+          goodiesCollected: true,
+          collectionStatus: "Collected_By_Behalf",
+        },
+      }),
+      prisma.participant.count({
+        where: {
+          ...eventFilter,
+          OR: [
+            { bibCollected: false },
+            { tshirtCollected: false },
+            { goodiesCollected: false },
+          ],
+        },
+      }),
       prisma.participant.count({ where: { ...eventFilter, source: "ON_SPOT" } }),
       prisma.participant.count({ where: bulkFilter }),
       prisma.participant.count({
         where: {
           ...bulkFilter,
-          collectionStatus: { in: ["Collected", "Collected_By_Behalf"] },
+          bibCollected: true,
+          tshirtCollected: true,
+          goodiesCollected: true,
         },
       }),
-      prisma.participant.count({ where: { ...bulkFilter, collectionStatus: "Pending" } }),
+      prisma.participant.count({
+        where: {
+          ...bulkFilter,
+          OR: [
+            { bibCollected: false },
+            { tshirtCollected: false },
+            { goodiesCollected: false },
+          ],
+        },
+      }),
       prisma.participant.count({ where: individualFilter }),
       prisma.participant.count({
         where: {
           ...individualFilter,
-          collectionStatus: { in: ["Collected", "Collected_By_Behalf"] },
+          bibCollected: true,
+          tshirtCollected: true,
+          goodiesCollected: true,
         },
       }),
-      prisma.participant.count({ where: { ...individualFilter, collectionStatus: "Pending" } }),
+      prisma.participant.count({
+        where: {
+          ...individualFilter,
+          OR: [
+            { bibCollected: false },
+            { tshirtCollected: false },
+            { goodiesCollected: false },
+          ],
+        },
+      }),
     ]);
 
     return NextResponse.json({

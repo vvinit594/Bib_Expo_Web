@@ -59,6 +59,7 @@ export async function POST(request: Request) {
     const roleLabel = auth.role === "ADMIN" ? "Admin" : auth.role === "ORGANIZER" ? "Organizer" : "Volunteer";
 
     for (const p of pendingParticipants) {
+      const now = new Date();
       await prisma.participant.update({
         where: { id: p.id },
         data: {
@@ -67,7 +68,16 @@ export async function POST(request: Request) {
           collectionMethod: "BULK_TEAM",
           collectedByName: teamName,
           collectedByVolunteerId: auth.id,
-          collectedAt: new Date(),
+          collectedAt: now,
+          bibCollected: true,
+          tshirtCollected: true,
+          goodiesCollected: true,
+          bibCollectedAt: now,
+          tshirtCollectedAt: now,
+          goodiesCollectedAt: now,
+          bibCollectedBy: roleLabel,
+          tshirtCollectedBy: roleLabel,
+          goodiesCollectedBy: roleLabel,
         },
       });
 

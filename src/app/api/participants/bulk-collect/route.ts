@@ -107,10 +107,12 @@ export async function POST(request: Request) {
         skipped += 1;
         continue;
       }
-      if (participant.collectionStatus !== "Pending") {
+      const fullyCollected = participant.bibCollected && participant.tshirtCollected && participant.goodiesCollected;
+      if (fullyCollected) {
         skipped += 1;
         continue;
       }
+      const now = new Date();
       await prisma.participant.update({
         where: { id },
         data: {
@@ -121,7 +123,16 @@ export async function POST(request: Request) {
           collectedByContact: behalfContact?.trim() ?? null,
           collectedByRelation: relationText,
           collectedByVolunteerId: auth.id,
-          collectedAt: new Date(),
+          collectedAt: now,
+          bibCollected: true,
+          tshirtCollected: true,
+          goodiesCollected: true,
+          bibCollectedAt: now,
+          tshirtCollectedAt: now,
+          goodiesCollectedAt: now,
+          bibCollectedBy: behalfName.trim(),
+          tshirtCollectedBy: behalfName.trim(),
+          goodiesCollectedBy: behalfName.trim(),
         },
       });
 

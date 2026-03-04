@@ -51,18 +51,22 @@ export async function GET(request: Request) {
     }
 
     const mapped = filtered.map((p) => {
+      const allKitCollected = p.bibCollected && p.tshirtCollected && p.goodiesCollected;
+      const anyKitCollected = p.bibCollected || p.tshirtCollected || p.goodiesCollected;
       // Normalized status for UI:
-      // - Pending + EXCEL  -> "pending"
+      // - All kit items collected -> "collected" or "collected-by-behalf"
+      // - Some kit items collected -> "partially-collected"
+      // - Pending + EXCEL -> "pending"
       // - Pending + ON_SPOT -> "on-spot"
-      // - Collected / Collected_By_Behalf -> "collected"
-      const status =
-        p.collectionStatus === "Pending"
-          ? p.source === "ON_SPOT"
-            ? "on-spot"
-            : "pending"
-          : p.collectionStatus === "Collected_By_Behalf"
-            ? "collected-by-behalf"
-            : "collected";
+      let status: string;
+      if (allKitCollected) {
+        status =
+          p.collectionStatus === "Collected_By_Behalf" ? "collected-by-behalf" : "collected";
+      } else if (anyKitCollected) {
+        status = "partially-collected";
+      } else {
+        status = p.source === "ON_SPOT" ? "on-spot" : "pending";
+      }
 
       const collectedAt = p.collectedAt
         ? p.collectedAt.toLocaleTimeString("en-IN", {
@@ -111,6 +115,9 @@ export async function GET(request: Request) {
         paymentStatus: p.paymentStatus,
         collectedAt,
         collectedBy,
+        bibCollected: p.bibCollected,
+        tshirtCollected: p.tshirtCollected,
+        goodiesCollected: p.goodiesCollected,
       };
     });
 

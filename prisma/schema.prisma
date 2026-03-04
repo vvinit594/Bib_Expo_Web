@@ -70,6 +70,15 @@ model Participant {
   collectedByRelation    String?
   collectedByVolunteerId String?
   collectedAt            DateTime?
+  bibCollected           Boolean           @default(false)
+  tshirtCollected        Boolean           @default(false)
+  goodiesCollected       Boolean           @default(false)
+  bibCollectedAt         DateTime?
+  tshirtCollectedAt      DateTime?
+  goodiesCollectedAt     DateTime?
+  bibCollectedBy         String?
+  tshirtCollectedBy      String?
+  goodiesCollectedBy     String?
   emailSent              Boolean           @default(false)
   emailSentAt            DateTime?
 
@@ -120,5 +129,21 @@ model BulkTeamCollectionLog {
   createdAt        DateTime @default(now())
 
   @@index([eventId])
+  @@index([createdAt])
+}
+
+model KitCollectionLog {
+  id             String   @id @default(uuid())
+  eventId        String?
+  participantId  String
+  bibNumber      Int
+  participantName String
+  itemType       String
+  collectedBy    String
+  counterName    String?
+  createdAt      DateTime @default(now())
+
+  @@index([eventId])
+  @@index([participantId])
   @@index([createdAt])
 }

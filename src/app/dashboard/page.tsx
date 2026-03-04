@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { ScrollAwareHeader } from "@/components/ui/ScrollAwareHeader";
 
-type ParticipantStatus = "pending" | "collected" | "collected-by-behalf" | "on-spot";
+type ParticipantStatus = "pending" | "partially-collected" | "collected" | "collected-by-behalf" | "on-spot";
 
 type Participant = {
   id: string;
@@ -28,6 +28,9 @@ type Participant = {
   paymentStatus: "paid" | "pending";
   collectedAt?: string;
   collectedBy?: string;
+  bibCollected?: boolean;
+  tshirtCollected?: boolean;
+  goodiesCollected?: boolean;
 };
 
 type AuthUser = {
@@ -57,6 +60,8 @@ export default function DashboardPage() {
   const [participants, setParticipants] = React.useState<Participant[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [showBehalfModalFor, setShowBehalfModalFor] = React.useState<Participant | null>(null);
+  const [showKitModalFor, setShowKitModalFor] = React.useState<Participant | null>(null);
+  const [kitForm, setKitForm] = React.useState({ bib: false, tshirt: false, goodies: false });
   const [showOnSpotModal, setShowOnSpotModal] = React.useState(false);
   const [collectingId, setCollectingId] = React.useState<string | null>(null);
   const [undoingId, setUndoingId] = React.useState<string | null>(null);
@@ -143,7 +148,10 @@ export default function DashboardPage() {
       });
   }, [isAdmin]);
 
-  const isPending = (p: Participant) => p.status === "pending" || p.status === "on-spot";
+  const isPending = (p: Participant) =>
+    p.status === "pending" || p.status === "on-spot" || p.status === "partially-collected";
+  const isFullyCollected = (p: Participant) =>
+    p.status === "collected" || p.status === "collected-by-behalf";
   const toggleSelected = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -259,6 +267,31 @@ export default function DashboardPage() {
       setMobileEventMenuOpen(false);
     }
   }, [mobileMenuOpen]);
+
+  async function handleKitCollect() {
+    if (!showKitModalFor || collectingId) return;
+    const items: ("bib" | "tshirt" | "goodies")[] = [];
+    if (kitForm.bib && !showKitModalFor.bibCollected) items.push("bib");
+    if (kitForm.tshirt && !showKitModalFor.tshirtCollected) items.push("tshirt");
+    if (kitForm.goodies && !showKitModalFor.goodiesCollected) items.push("goodies");
+    if (items.length === 0) return;
+    setCollectingId(showKitModalFor.id);
+    try {
+      const res = await fetch(`/api/participants/${showKitModalFor.id}/collect`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "partial", items }),
+      });
+      if (res.ok) {
+        setShowKitModalFor(null);
+        setKitForm({ bib: false, tshirt: false, goodies: false });
+        fetchParticipants();
+        fetchActivities();
+      }
+    } finally {
+      setCollectingId(null);
+    }
+  }
 
   async function handleMarkCollected(p: Participant, type: "self" | "behalf", extra?: { name: string; contact: string; relation: string }) {
     if (collectingId) return;
@@ -903,16 +936,20 @@ export default function DashboardPage() {
                         className={
                           p.status === "pending"
                             ? "inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-[0.7rem] font-semibold text-amber-700 ring-1 ring-amber-100"
-                            : p.status === "collected" || p.status === "collected-by-behalf"
-                              ? "inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-[0.7rem] font-semibold text-emerald-700 ring-1 ring-emerald-100"
-                              : "inline-flex items-center rounded-full bg-sky-50 px-3 py-1 text-[0.7rem] font-semibold text-sky-700 ring-1 ring-sky-100"
+                            : p.status === "partially-collected"
+                              ? "inline-flex items-center rounded-full bg-sky-50 px-3 py-1 text-[0.7rem] font-semibold text-sky-700 ring-1 ring-sky-100"
+                              : p.status === "collected" || p.status === "collected-by-behalf"
+                                ? "inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-[0.7rem] font-semibold text-emerald-700 ring-1 ring-emerald-100"
+                                : "inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-[0.7rem] font-semibold text-slate-700 ring-1 ring-slate-200"
                         }
                       >
                         {p.status === "pending"
                           ? "Pending"
-                          : p.status === "collected" || p.status === "collected-by-behalf"
-                            ? "Collected"
-                            : "On-spot"}
+                          : p.status === "partially-collected"
+                            ? "Partially Collected"
+                            : p.status === "collected" || p.status === "collected-by-behalf"
+                              ? "Collected"
+                              : "On-spot"}
                       </span>
                       <label className="flex shrink-0 items-center gap-1.5 text-slate-600">
                         <input
@@ -949,10 +986,40 @@ export default function DashboardPage() {
                         ? "Pending"
                         : p.status === "on-spot"
                           ? "On-spot"
-                          : p.collectedBy
-                            ? `Collected (${p.collectedBy})`
-                            : "Collected"}
+                          : p.status === "partially-collected"
+                            ? "Partially Collected"
+                            : p.collectedBy
+                              ? `Collected (${p.collectedBy})`
+                              : "Collected"}
                     </p>
+                    <div className="col-span-full rounded-lg border border-slate-200 bg-white p-2">
+                      <p className="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500">
+                        Kit Status
+                      </p>
+                      <div className="flex flex-wrap gap-3 text-[0.72rem]">
+                        <span className="inline-flex items-center gap-1.5">
+                          {p.bibCollected ? (
+                            <span className="text-emerald-600">Bib: ✅ Collected</span>
+                          ) : (
+                            <span className="text-amber-600">Bib: ⏳ Pending</span>
+                          )}
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                          {p.tshirtCollected ? (
+                            <span className="text-emerald-600">T-Shirt: ✅ Collected</span>
+                          ) : (
+                            <span className="text-amber-600">T-Shirt: ⏳ Pending</span>
+                          )}
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                          {p.goodiesCollected ? (
+                            <span className="text-emerald-600">Goodies: ✅ Collected</span>
+                          ) : (
+                            <span className="text-amber-600">Goodies: ⏳ Pending</span>
+                          )}
+                        </span>
+                      </div>
+                    </div>
                     {p.collectedAt ? (
                       <p><span className="font-medium text-slate-700">Collected Time:</span> {p.collectedAt}</p>
                     ) : (
@@ -980,12 +1047,19 @@ export default function DashboardPage() {
                     )}
 
                     <div className="flex flex-wrap gap-2">
-                      {p.status === "pending" && (
+                      {(p.status === "pending" || p.status === "on-spot" || p.status === "partially-collected") && (
                         <>
                           <button
                             type="button"
-                            onClick={() => handleMarkCollected(p, "self")}
-                            disabled={collectingId === p.id}
+                            onClick={() => {
+                              setShowKitModalFor(p);
+                              setKitForm({
+                                bib: !p.bibCollected,
+                                tshirt: !p.tshirtCollected,
+                                goodies: !p.goodiesCollected,
+                              });
+                            }}
+                            disabled={collectingId === p.id || (!!p.bibCollected && !!p.tshirtCollected && !!p.goodiesCollected)}
                             className="inline-flex items-center justify-center rounded-full bg-[#E11D48] px-3.5 py-1.5 text-[0.7rem] font-semibold text-white shadow-sm transition hover:bg-[#BE123C] disabled:opacity-60"
                           >
                             {collectingId === p.id ? "..." : "Mark as Collected"}
@@ -1000,7 +1074,7 @@ export default function DashboardPage() {
                           </button>
                         </>
                       )}
-                      {(p.status === "collected" || p.status === "collected-by-behalf") && (
+                      {isFullyCollected(p) && (
                         <>
                           <button
                             disabled
@@ -1254,6 +1328,82 @@ export default function DashboardPage() {
                   )}
                 </ul>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Kit Collection modal */}
+      {showKitModalFor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 py-6 backdrop-blur-[2px]">
+          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl shadow-slate-900/25">
+            <h2 className="text-base font-semibold text-slate-900">Kit Collection</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Select items to collect for {showKitModalFor.name} {showKitModalFor.bib}
+            </p>
+            <div className="mt-4 space-y-3">
+              <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 p-3 hover:bg-slate-50">
+                <input
+                  type="checkbox"
+                  checked={kitForm.bib}
+                  onChange={(e) => setKitForm((f) => ({ ...f, bib: e.target.checked }))}
+                  disabled={!!showKitModalFor.bibCollected}
+                  className="size-4 rounded border-slate-300 text-[#E11D48] focus:ring-[#E11D48] disabled:opacity-50"
+                />
+                <span className="text-sm font-medium text-slate-700">
+                  {showKitModalFor.bibCollected ? "Bib: Already Collected" : "☐ Bib Collect"}
+                </span>
+              </label>
+              <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 p-3 hover:bg-slate-50">
+                <input
+                  type="checkbox"
+                  checked={kitForm.tshirt}
+                  onChange={(e) => setKitForm((f) => ({ ...f, tshirt: e.target.checked }))}
+                  disabled={!!showKitModalFor.tshirtCollected}
+                  className="size-4 rounded border-slate-300 text-[#E11D48] focus:ring-[#E11D48] disabled:opacity-50"
+                />
+                <span className="text-sm font-medium text-slate-700">
+                  {showKitModalFor.tshirtCollected ? "T-Shirt: Already Collected" : "☐ T-Shirt Collect"}
+                </span>
+              </label>
+              <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 p-3 hover:bg-slate-50">
+                <input
+                  type="checkbox"
+                  checked={kitForm.goodies}
+                  onChange={(e) => setKitForm((f) => ({ ...f, goodies: e.target.checked }))}
+                  disabled={!!showKitModalFor.goodiesCollected}
+                  className="size-4 rounded border-slate-300 text-[#E11D48] focus:ring-[#E11D48] disabled:opacity-50"
+                />
+                <span className="text-sm font-medium text-slate-700">
+                  {showKitModalFor.goodiesCollected ? "Goodies: Already Collected" : "☐ Goodies Collect"}
+                </span>
+              </label>
+            </div>
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowKitModalFor(null);
+                  setKitForm({ bib: false, tshirt: false, goodies: false });
+                }}
+                disabled={!!collectingId}
+                className="inline-flex h-9 items-center justify-center rounded-full border border-slate-200 bg-white px-4 text-xs font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleKitCollect}
+                disabled={
+                  collectingId === showKitModalFor.id ||
+                  !((kitForm.bib && !showKitModalFor.bibCollected) ||
+                    (kitForm.tshirt && !showKitModalFor.tshirtCollected) ||
+                    (kitForm.goodies && !showKitModalFor.goodiesCollected))
+                }
+                className="inline-flex h-9 items-center justify-center rounded-full bg-[#E11D48] px-4 text-xs font-semibold text-white shadow-sm transition hover:bg-[#BE123C] disabled:opacity-60"
+              >
+                {collectingId === showKitModalFor.id ? "Collecting…" : "Confirm Collection"}
+              </button>
             </div>
           </div>
         </div>
