@@ -396,7 +396,12 @@ export default function DashboardPage() {
     }
   }
 
-  const filtered = participants;
+  const filtered = React.useMemo(() => {
+    if (selectedTeam) {
+      return participants.filter((p) => p.bulkTeam === selectedTeam);
+    }
+    return participants;
+  }, [participants, selectedTeam]);
 
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -1110,7 +1115,9 @@ export default function DashboardPage() {
                 <p className="py-6 text-center text-sm text-slate-500">
                   {participants.length === 0
                     ? "No participants yet. Upload Excel from Admin Import to get started."
-                    : "No participants match this search."}
+                    : selectedTeam
+                      ? `No participants in team "${selectedTeam}".`
+                      : "No participants match this search."}
                 </p>
               )}
             </div>
