@@ -62,6 +62,10 @@ export default function DashboardPage() {
   const [loading, setLoading] = React.useState(true);
   const [showBehalfModalFor, setShowBehalfModalFor] = React.useState<Participant | null>(null);
   const [showKitModalFor, setShowKitModalFor] = React.useState<Participant | null>(null);
+  const [collectionFlow, setCollectionFlow] = React.useState<"mark" | "behalf" | "bulk" | null>("mark");
+  const [behalfKitForm, setBehalfKitForm] = React.useState({ bib: false, tshirt: false, goodies: false });
+  const [showBulkKitModal, setShowBulkKitModal] = React.useState(false);
+  const [bulkKitForm, setBulkKitForm] = React.useState({ bib: false, tshirt: false, goodies: false });
   const [kitForm, setKitForm] = React.useState({ bib: false, tshirt: false, goodies: false });
   const [showOnSpotModal, setShowOnSpotModal] = React.useState(false);
   const [collectingId, setCollectingId] = React.useState<string | null>(null);
@@ -75,6 +79,7 @@ export default function DashboardPage() {
     bulkTotal?: number;
     bulkCollected?: number;
     bulkPending?: number;
+    bulkTeams?: { name: string; total: number; collected: number; pending: number; status: "collected" | "pending" | "partially-collected" }[];
     individualTotal?: number;
     individualCollected?: number;
     individualPending?: number;
@@ -295,23 +300,36 @@ export default function DashboardPage() {
     }
   }
 
-  async function handleMarkCollected(p: Participant, type: "self" | "behalf", extra?: { name: string; contact: string; relation: string }) {
+  async function handleMarkCollected(
+    p: Participant,
+    type: "self" | "behalf",
+    extra?: { name: string; contact: string; relation: string },
+    items?: ("bib" | "tshirt" | "goodies")[]
+  ) {
     if (collectingId) return;
     setCollectingId(p.id);
     try {
+      const body =
+        type === "self"
+          ? { type: "self" as const }
+          : {
+              type: "behalf" as const,
+              behalfName: extra?.name,
+              behalfContact: extra?.contact,
+              behalfRelation: extra?.relation,
+              ...(items && items.length > 0 && { items }),
+            };
       const res = await fetch(`/api/participants/${p.id}/collect`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(
-          type === "self"
-            ? { type: "self" }
-            : { type: "behalf", behalfName: extra?.name, behalfContact: extra?.contact, behalfRelation: extra?.relation }
-        ),
+        body: JSON.stringify(body),
       });
       if (res.ok) {
         setShowBehalfModalFor(null);
         setBehalfForm({ name: "", contact: "", relation: "" });
+        setBehalfKitForm({ bib: false, tshirt: false, goodies: false });
         fetchParticipants();
+        fetchActivities();
       }
     } finally {
       setCollectingId(null);
@@ -320,7 +338,8 @@ export default function DashboardPage() {
 
   async function handleBulkCollect(e: React.FormEvent) {
     e.preventDefault();
-    if (selectedCount === 0 || !bulkForm.name.trim() || bulkCollecting) return;
+    const hasBulkItems = bulkKitForm.bib || bulkKitForm.tshirt || bulkKitForm.goodies;
+    if (selectedCount === 0 || !bulkForm.name.trim() || bulkCollecting || !hasBulkItems) return;
     setBulkCollecting(true);
     setBulkSuccessMessage(null);
     try {
@@ -333,6 +352,14 @@ export default function DashboardPage() {
           behalfContact: bulkForm.contact.trim() || undefined,
           behalfRelation: bulkForm.relation.trim() || undefined,
           idProof: bulkForm.idProof.trim() || undefined,
+          items:
+            bulkKitForm.bib || bulkKitForm.tshirt || bulkKitForm.goodies
+              ? [
+                  ...(bulkKitForm.bib ? (["bib"] as const) : []),
+                  ...(bulkKitForm.tshirt ? (["tshirt"] as const) : []),
+                  ...(bulkKitForm.goodies ? (["goodies"] as const) : []),
+                ]
+              : undefined,
         }),
       });
       const data = await res.json();
@@ -342,6 +369,7 @@ export default function DashboardPage() {
         setSelectedTeam(null);
         setShowBulkModal(false);
         setBulkForm({ name: "", contact: "", relation: "", idProof: "" });
+        setBulkKitForm({ bib: false, tshirt: false, goodies: false });
         fetchParticipants();
         setTimeout(() => setBulkSuccessMessage(null), 5000);
       } else {
@@ -879,7 +907,10 @@ export default function DashboardPage() {
                 )}
                 <button
                   type="button"
-                  onClick={() => setShowBulkModal(true)}
+                  onClick={() => {
+                    setShowBulkKitModal(true);
+                    setBulkKitForm({ bib: false, tshirt: false, goodies: false });
+                  }}
                   disabled={selectedCount === 0}
                   className="inline-flex h-9 items-center justify-center rounded-full bg-[#E11D48] px-4 text-[0.75rem] font-semibold text-white shadow-sm transition hover:bg-[#BE123C] disabled:opacity-50 disabled:pointer-events-none"
                 >
@@ -1059,6 +1090,7 @@ export default function DashboardPage() {
                           <button
                             type="button"
                             onClick={() => {
+                              setCollectionFlow("mark");
                               setShowKitModalFor(p);
                               setKitForm({ bib: false, tshirt: false, goodies: false });
                             }}
@@ -1069,8 +1101,13 @@ export default function DashboardPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => setShowBehalfModalFor(p)}
-                            disabled={!!collectingId}
+                            onClick={() => {
+                              setCollectionFlow("behalf");
+                              setShowKitModalFor(p);
+                              setKitForm({ bib: false, tshirt: false, goodies: false });
+                              setBehalfKitForm({ bib: false, tshirt: false, goodies: false });
+                            }}
+                            disabled={!!collectingId || (!!p.bibCollected && !!p.tshirtCollected && !!p.goodiesCollected)}
                             className="inline-flex items-center justify-center rounded-full border border-rose-200 bg-rose-50 px-3.5 py-1.5 text-[0.7rem] font-semibold text-rose-700 shadow-sm transition hover:bg-rose-100 disabled:opacity-60"
                           >
                             Collected on Behalf
@@ -1187,6 +1224,31 @@ export default function DashboardPage() {
                     <dd className="text-sm font-semibold text-amber-300">{stats.bulkPending ?? "—"}</dd>
                   </div>
                 </dl>
+                {stats?.bulkTeams && stats.bulkTeams.length > 0 && (
+                  <div className="mt-3 space-y-1.5">
+                    {stats.bulkTeams.map((team) => (
+                      <div key={team.name} className="flex items-center justify-between gap-2 rounded-lg bg-slate-800/50 px-2 py-1.5">
+                        <span className="truncate text-[0.7rem] font-medium text-slate-200" title={team.name}>{team.name}</span>
+                        <span className="flex shrink-0 items-center gap-1.5">
+                          {team.pending > 0 && (
+                            <span className="text-[0.65rem] text-slate-400">{team.pending} left</span>
+                          )}
+                          <span
+                            className={`rounded px-1.5 py-0.5 text-[0.65rem] font-semibold ${
+                              team.status === "collected"
+                                ? "bg-emerald-500/20 text-emerald-400"
+                                : team.status === "partially-collected"
+                                  ? "bg-amber-500/20 text-amber-300"
+                                  : "bg-slate-600/50 text-slate-400"
+                            }`}
+                          >
+                            {team.status === "collected" ? "Collected" : team.status === "partially-collected" ? "Partial" : "Pending"}
+                          </span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
             <div className="mt-4 border-t border-slate-700/50 pt-4">
@@ -1313,6 +1375,31 @@ export default function DashboardPage() {
                         <dd className="text-sm font-semibold text-amber-300">{stats.bulkPending ?? "—"}</dd>
                       </div>
                     </dl>
+                    {stats?.bulkTeams && stats.bulkTeams.length > 0 && (
+                      <div className="mt-3 space-y-1.5">
+                        {stats.bulkTeams.map((team) => (
+                          <div key={team.name} className="flex items-center justify-between gap-2 rounded-lg bg-slate-800/50 px-2 py-1.5">
+                            <span className="truncate text-[0.7rem] font-medium text-slate-200" title={team.name}>{team.name}</span>
+                            <span className="flex shrink-0 items-center gap-1.5">
+                              {team.pending > 0 && (
+                                <span className="text-[0.65rem] text-slate-400">{team.pending} left</span>
+                              )}
+                              <span
+                                className={`rounded px-1.5 py-0.5 text-[0.65rem] font-semibold ${
+                                  team.status === "collected"
+                                    ? "bg-emerald-500/20 text-emerald-400"
+                                    : team.status === "partially-collected"
+                                      ? "bg-amber-500/20 text-amber-300"
+                                      : "bg-slate-600/50 text-slate-400"
+                                }`}
+                              >
+                                {team.status === "collected" ? "Collected" : team.status === "partially-collected" ? "Partial" : "Pending"}
+                              </span>
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
                 <div className="mt-4 border-t border-slate-700/50 pt-4">
@@ -1440,25 +1527,52 @@ export default function DashboardPage() {
                 onClick={() => {
                   setShowKitModalFor(null);
                   setKitForm({ bib: false, tshirt: false, goodies: false });
+                  setCollectionFlow("mark");
+                  setBehalfKitForm({ bib: false, tshirt: false, goodies: false });
                 }}
                 disabled={!!collectingId}
                 className="inline-flex h-9 items-center justify-center rounded-full border border-slate-200 bg-white px-4 text-xs font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
               >
                 Cancel
               </button>
-              <button
-                type="button"
-                onClick={handleKitCollect}
-                disabled={
-                  collectingId === showKitModalFor.id ||
-                  !((kitForm.bib && !showKitModalFor.bibCollected) ||
-                    (kitForm.tshirt && !showKitModalFor.tshirtCollected) ||
-                    (kitForm.goodies && !showKitModalFor.goodiesCollected))
-                }
-                className="inline-flex h-9 items-center justify-center rounded-full bg-[#E11D48] px-4 text-xs font-semibold text-white shadow-sm transition hover:bg-[#BE123C] disabled:opacity-60"
-              >
-                {collectingId === showKitModalFor.id ? "Collecting…" : "Confirm Collection"}
-              </button>
+              {collectionFlow === "behalf" ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const hasAny =
+                      (kitForm.bib && !showKitModalFor.bibCollected) ||
+                      (kitForm.tshirt && !showKitModalFor.tshirtCollected) ||
+                      (kitForm.goodies && !showKitModalFor.goodiesCollected);
+                    if (!hasAny) return;
+                    setBehalfKitForm(kitForm);
+                    setShowBehalfModalFor(showKitModalFor);
+                    setShowKitModalFor(null);
+                    setCollectionFlow("mark");
+                  }}
+                  disabled={
+                    !((kitForm.bib && !showKitModalFor.bibCollected) ||
+                      (kitForm.tshirt && !showKitModalFor.tshirtCollected) ||
+                      (kitForm.goodies && !showKitModalFor.goodiesCollected))
+                  }
+                  className="inline-flex h-9 items-center justify-center rounded-full bg-[#E11D48] px-4 text-xs font-semibold text-white shadow-sm transition hover:bg-[#BE123C] disabled:opacity-60"
+                >
+                  Continue to Collector Details
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleKitCollect}
+                  disabled={
+                    collectingId === showKitModalFor.id ||
+                    !((kitForm.bib && !showKitModalFor.bibCollected) ||
+                      (kitForm.tshirt && !showKitModalFor.tshirtCollected) ||
+                      (kitForm.goodies && !showKitModalFor.goodiesCollected))
+                  }
+                  className="inline-flex h-9 items-center justify-center rounded-full bg-[#E11D48] px-4 text-xs font-semibold text-white shadow-sm transition hover:bg-[#BE123C] disabled:opacity-60"
+                >
+                  {collectingId === showKitModalFor.id ? "Collecting…" : "Confirm Collection"}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -1491,6 +1605,71 @@ export default function DashboardPage() {
                 className="inline-flex h-9 items-center justify-center rounded-full bg-amber-600 px-4 text-xs font-semibold text-white shadow-sm transition hover:bg-amber-700 disabled:opacity-60"
               >
                 {undoingId === undoConfirmFor.id ? "Undoing..." : "Confirm Undo"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Kit selection modal (step 1 before Bulk Collection form) */}
+      {showBulkKitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 py-6 backdrop-blur-[2px]">
+          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl shadow-slate-900/25">
+            <h2 className="text-base font-semibold text-slate-900">Kit Collection</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Select items to collect for <span className="font-semibold">{selectedCount}</span> participant(s)
+            </p>
+            <div className="mt-4 space-y-3">
+              <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 p-3 hover:bg-slate-50">
+                <input
+                  type="checkbox"
+                  checked={bulkKitForm.bib}
+                  onChange={(e) => setBulkKitForm((f) => ({ ...f, bib: e.target.checked }))}
+                  className="size-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                />
+                <span className="text-sm font-medium text-slate-700">☐ Bib Collect</span>
+              </label>
+              <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 p-3 hover:bg-slate-50">
+                <input
+                  type="checkbox"
+                  checked={bulkKitForm.tshirt}
+                  onChange={(e) => setBulkKitForm((f) => ({ ...f, tshirt: e.target.checked }))}
+                  className="size-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                />
+                <span className="text-sm font-medium text-slate-700">☐ T-Shirt Collect</span>
+              </label>
+              <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 p-3 hover:bg-slate-50">
+                <input
+                  type="checkbox"
+                  checked={bulkKitForm.goodies}
+                  onChange={(e) => setBulkKitForm((f) => ({ ...f, goodies: e.target.checked }))}
+                  className="size-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                />
+                <span className="text-sm font-medium text-slate-700">☐ Goodies Collect</span>
+              </label>
+            </div>
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowBulkKitModal(false);
+                  setBulkKitForm({ bib: false, tshirt: false, goodies: false });
+                }}
+                className="inline-flex h-9 items-center justify-center rounded-full border border-slate-200 bg-white px-4 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!bulkKitForm.bib && !bulkKitForm.tshirt && !bulkKitForm.goodies) return;
+                  setShowBulkKitModal(false);
+                  setShowBulkModal(true);
+                }}
+                disabled={!bulkKitForm.bib && !bulkKitForm.tshirt && !bulkKitForm.goodies}
+                className="inline-flex h-9 items-center justify-center rounded-full bg-[#E11D48] px-4 text-xs font-semibold text-white shadow-sm transition hover:bg-[#BE123C] disabled:opacity-60"
+              >
+                Continue to Collector Details
               </button>
             </div>
           </div>
@@ -1552,6 +1731,7 @@ export default function DashboardPage() {
                   onClick={() => {
                     setShowBulkModal(false);
                     setBulkForm({ name: "", contact: "", relation: "", idProof: "" });
+                    setBulkKitForm({ bib: false, tshirt: false, goodies: false });
                   }}
                   disabled={bulkCollecting}
                   className="inline-flex h-8 items-center justify-center rounded-full border border-slate-200 bg-white px-3 font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
@@ -1560,7 +1740,12 @@ export default function DashboardPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={bulkCollecting || selectedCount === 0 || !bulkForm.name.trim()}
+                  disabled={
+                    bulkCollecting ||
+                    selectedCount === 0 ||
+                    !bulkForm.name.trim() ||
+                    (!bulkKitForm.bib && !bulkKitForm.tshirt && !bulkKitForm.goodies)
+                  }
                   className="inline-flex h-8 items-center justify-center rounded-full bg-[#E11D48] px-4 font-semibold text-white shadow-sm hover:bg-[#BE123C] disabled:opacity-60"
                 >
                   {bulkCollecting ? "Marking..." : "Confirm Bulk Collection"}
@@ -1584,7 +1769,11 @@ export default function DashboardPage() {
               className="mt-4 space-y-3 text-sm"
               onSubmit={(e) => {
                 e.preventDefault();
-                handleMarkCollected(showBehalfModalFor, "behalf", behalfForm);
+                const items: ("bib" | "tshirt" | "goodies")[] = [];
+                if (behalfKitForm.bib && !showBehalfModalFor.bibCollected) items.push("bib");
+                if (behalfKitForm.tshirt && !showBehalfModalFor.tshirtCollected) items.push("tshirt");
+                if (behalfKitForm.goodies && !showBehalfModalFor.goodiesCollected) items.push("goodies");
+                handleMarkCollected(showBehalfModalFor, "behalf", behalfForm, items.length > 0 ? items : undefined);
               }}
             >
               <div className="space-y-1">
@@ -1621,6 +1810,7 @@ export default function DashboardPage() {
                   onClick={() => {
                     setShowBehalfModalFor(null);
                     setBehalfForm({ name: "", contact: "", relation: "" });
+                    setBehalfKitForm({ bib: false, tshirt: false, goodies: false });
                   }}
                   className="inline-flex h-8 items-center justify-center rounded-full border border-slate-200 bg-white px-3 font-medium text-slate-600 hover:bg-slate-50"
                 >

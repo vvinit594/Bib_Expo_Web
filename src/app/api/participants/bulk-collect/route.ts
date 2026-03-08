@@ -14,6 +14,7 @@ const bulkCollectSchema = z.object({
   behalfContact: z.string().optional(),
   behalfRelation: z.string().optional(),
   idProof: z.string().optional(),
+  items: z.array(z.enum(["bib", "tshirt", "goodies"])).optional(),
 });
 
 function queueBulkCollectionEmail(params: {
@@ -84,7 +85,11 @@ export async function POST(request: Request) {
       behalfContact,
       behalfRelation,
       idProof,
+      items: requestedItems,
     } = parsed.data;
+    const bulkItems = requestedItems && requestedItems.length > 0
+      ? requestedItems
+      : (["bib", "tshirt", "goodies"] as const);
     const relationText = [
       behalfRelation?.trim(),
       idProof?.trim() ? `ID: ${idProof.trim()}` : null,
@@ -108,12 +113,15 @@ export async function POST(request: Request) {
         skipped += 1;
         continue;
       }
-      const fullyCollected = participant.bibCollected && participant.tshirtCollected && participant.goodiesCollected;
-      if (fullyCollected) {
+      const wouldCollectBib = bulkItems.includes("bib") && !participant.bibCollected;
+      const wouldCollectTshirt = bulkItems.includes("tshirt") && !participant.tshirtCollected;
+      const wouldCollectGoodies = bulkItems.includes("goodies") && !participant.goodiesCollected;
+      const hasAnythingToCollect = wouldCollectBib || wouldCollectTshirt || wouldCollectGoodies;
+      if (!hasAnythingToCollect) {
         skipped += 1;
         continue;
       }
-      if (!participant.tshirtCollected && participant.eventId) {
+      if (wouldCollectTshirt && participant.eventId) {
         const size = extractTshirtSizeCategory(participant.tShirtSize);
         if (size) {
           const event = await prisma.expoEvent.findUnique({
@@ -133,28 +141,59 @@ export async function POST(request: Request) {
         }
       }
       const now = new Date();
+      const collectBib = wouldCollectBib;
+      const collectTshirt = wouldCollectTshirt;
+      const collectGoodies = wouldCollectGoodies;
+      const allCollectedAfter =
+        (participant.bibCollected || collectBib) &&
+        (participant.tshirtCollected || collectTshirt) &&
+        (participant.goodiesCollected || collectGoodies);
       await prisma.participant.update({
         where: { id },
         data: {
-          collectionStatus: "Collected_By_Behalf",
-          collectedByType: "Behalf",
-          collectionMethod: "BULK",
-          collectedByName: behalfName.trim(),
-          collectedByContact: behalfContact?.trim() ?? null,
-          collectedByRelation: relationText,
-          collectedByVolunteerId: auth.id,
-          collectedAt: now,
-          bibCollected: true,
-          tshirtCollected: true,
-          goodiesCollected: true,
-          bibCollectedAt: now,
-          tshirtCollectedAt: now,
-          goodiesCollectedAt: now,
-          bibCollectedBy: behalfName.trim(),
-          tshirtCollectedBy: behalfName.trim(),
-          goodiesCollectedBy: behalfName.trim(),
+          ...(allCollectedAfter && {
+            collectionStatus: "Collected_By_Behalf" as const,
+            collectedByType: "Behalf" as const,
+            collectionMethod: "BULK",
+            collectedByName: behalfName.trim(),
+            collectedByContact: behalfContact?.trim() ?? null,
+            collectedByRelation: relationText,
+            collectedByVolunteerId: auth.id,
+            collectedAt: now,
+          }),
+          bibCollected: participant.bibCollected || collectBib,
+          tshirtCollected: participant.tshirtCollected || collectTshirt,
+          goodiesCollected: participant.goodiesCollected || collectGoodies,
+          bibCollectedAt: collectBib ? now : participant.bibCollectedAt,
+          tshirtCollectedAt: collectTshirt ? now : participant.tshirtCollectedAt,
+          goodiesCollectedAt: collectGoodies ? now : participant.goodiesCollectedAt,
+          bibCollectedBy: collectBib ? behalfName.trim() : participant.bibCollectedBy,
+          tshirtCollectedBy: collectTshirt ? behalfName.trim() : participant.tshirtCollectedBy,
+          goodiesCollectedBy: collectGoodies ? behalfName.trim() : participant.goodiesCollectedBy,
         },
       });
+
+      for (const item of ["bib", "tshirt", "goodies"] as const) {
+        const didCollect =
+          (item === "bib" && collectBib) ||
+          (item === "tshirt" && collectTshirt) ||
+          (item === "goodies" && collectGoodies);
+        if (didCollect) {
+          const size = item === "tshirt" ? extractTshirtSizeCategory(participant.tShirtSize) : null;
+          await prisma.kitCollectionLog.create({
+            data: {
+              eventId: participant.eventId,
+              participantId: participant.id,
+              bibNumber: participant.bibNumber,
+              participantName: participant.name,
+              itemType: item,
+              itemSize: size,
+              collectedBy: behalfName.trim(),
+              counterName: auth.counterName ?? null,
+            },
+          });
+        }
+      }
 
       if (participant.email && !participant.emailSent) {
         queueBulkCollectionEmail({

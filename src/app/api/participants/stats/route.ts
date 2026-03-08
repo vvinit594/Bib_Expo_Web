@@ -63,6 +63,48 @@ export async function GET() {
     const bulkFilter = { ...eventFilter, bulkTeam: { not: null } };
     const individualFilter = { ...eventFilter, OR: [{ bulkTeam: null }, { bulkTeam: "" }] };
 
+    // Fetch bulk participants to compute team-level stats
+    const bulkParticipants = await prisma.participant.findMany({
+      where: bulkFilter,
+      select: {
+        bulkTeam: true,
+        bibCollected: true,
+        tshirtCollected: true,
+        goodiesCollected: true,
+      },
+    });
+
+    const teamMap = new Map<
+      string,
+      { total: number; collected: number; pending: number; status: "collected" | "pending" | "partially-collected" }
+    >();
+    for (const p of bulkParticipants) {
+      const team = (p.bulkTeam ?? "").trim();
+      if (!team) continue;
+      const fullyCollected = !!(p.bibCollected && p.tshirtCollected && p.goodiesCollected);
+      const existing = teamMap.get(team);
+      if (!existing) {
+        teamMap.set(team, {
+          total: 1,
+          collected: fullyCollected ? 1 : 0,
+          pending: fullyCollected ? 0 : 1,
+          status: "pending",
+        });
+      } else {
+        existing.total += 1;
+        if (fullyCollected) existing.collected += 1;
+        else existing.pending += 1;
+      }
+    }
+    for (const t of teamMap.values()) {
+      if (t.collected === t.total) t.status = "collected";
+      else if (t.collected > 0) t.status = "partially-collected";
+      else t.status = "pending";
+    }
+    const bulkTeams = Array.from(teamMap.entries())
+      .map(([name, data]) => ({ name, ...data }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
     const [
       total,
       collectedSelf,
@@ -154,6 +196,7 @@ export async function GET() {
       bulkTotal,
       bulkCollected,
       bulkPending,
+      bulkTeams,
       individualTotal,
       individualCollected,
       individualPending,

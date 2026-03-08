@@ -122,8 +122,16 @@ export async function POST(
     }
 
     const counterName = auth.counterName ?? `Counter ${auth.phone.slice(-4)}` ?? "Counter";
+    const isBehalfPartial = type === "behalf" && items && items.length > 0;
 
-    if (type === "partial") {
+    if (type === "partial" || isBehalfPartial) {
+      const collectItems = items ?? [];
+      if (collectItems.length === 0) {
+        return NextResponse.json(
+          { error: "At least one item (bib, tshirt, goodies) is required" },
+          { status: 400 }
+        );
+      }
       const now = new Date();
       const data: {
         bibCollected?: boolean;
@@ -136,12 +144,13 @@ export async function POST(
         goodiesCollectedAt?: Date;
         goodiesCollectedBy?: string;
       } = {};
-      if (items!.includes("bib") && !participant.bibCollected) {
+      const collectedBy = isBehalfPartial ? (behalfName?.trim() ?? counterName) : counterName;
+      if (collectItems.includes("bib") && !participant.bibCollected) {
         data.bibCollected = true;
         data.bibCollectedAt = now;
-        data.bibCollectedBy = counterName;
+        data.bibCollectedBy = collectedBy;
       }
-      if (items!.includes("tshirt") && !participant.tshirtCollected) {
+      if (collectItems.includes("tshirt") && !participant.tshirtCollected) {
         const size = extractTshirtSizeCategory(participant.tShirtSize);
         if (size && participant.eventId) {
           const event = await prisma.expoEvent.findUnique({
@@ -168,17 +177,25 @@ export async function POST(
         }
         data.tshirtCollected = true;
         data.tshirtCollectedAt = now;
-        data.tshirtCollectedBy = counterName;
+        data.tshirtCollectedBy = collectedBy;
       }
-      if (items!.includes("goodies") && !participant.goodiesCollected) {
+      if (collectItems.includes("goodies") && !participant.goodiesCollected) {
         data.goodiesCollected = true;
         data.goodiesCollectedAt = now;
-        data.goodiesCollectedBy = counterName;
+        data.goodiesCollectedBy = collectedBy;
       }
       if (Object.keys(data).length > 0) {
+        const updateData = {
+          ...data,
+          ...(isBehalfPartial && {
+            collectedByName: behalfName?.trim() ?? null,
+            collectedByContact: behalfContact?.trim() ?? null,
+            collectedByRelation: behalfRelation?.trim() ?? null,
+          }),
+        };
         const after = await prisma.participant.update({
           where: { id },
-          data,
+          data: updateData,
         });
         const allTrue = after.bibCollected && after.tshirtCollected && after.goodiesCollected;
         if (allTrue) {
@@ -186,14 +203,19 @@ export async function POST(
             where: { id },
             data: {
               collectionStatus: "Collected",
-              collectedByType: "Self",
-              collectionMethod: "SELF",
+              collectedByType: isBehalfPartial ? "Behalf" : "Self",
+              collectionMethod: isBehalfPartial ? "BEHALF" : "SELF",
               collectedByVolunteerId: auth.id,
               collectedAt: now,
+              ...(isBehalfPartial && {
+                collectedByName: behalfName?.trim() ?? null,
+                collectedByContact: behalfContact?.trim() ?? null,
+                collectedByRelation: behalfRelation?.trim() ?? null,
+              }),
             },
           });
         }
-        for (const item of items!) {
+        for (const item of collectItems) {
           const key = item === "bib" ? "bibCollected" : item === "tshirt" ? "tshirtCollected" : "goodiesCollected";
           const prev = participant[key as keyof typeof participant];
           if (!prev) {
@@ -206,13 +228,26 @@ export async function POST(
                 participantName: participant.name,
                 itemType: item,
                 itemSize: size,
-                collectedBy: counterName,
+                collectedBy: isBehalfPartial ? (behalfName?.trim() ?? counterName) : counterName,
                 counterName: auth.counterName ?? null,
               },
             });
           }
         }
+        if (isBehalfPartial && participant.email && !participant.emailSent) {
+          queueCollectionEmail({
+            participantId: participant.id,
+            participantName: participant.name,
+            participantEmail: participant.email,
+            bibNumber: participant.bibNumber,
+            eventName: participant.expoEvent?.name ?? "Bib Expo",
+            collectionType: "BEHALF",
+            collectorName: behalfName?.trim(),
+          });
+        }
+        return NextResponse.json({ success: true });
       }
+      return NextResponse.json({ success: true });
     } else {
       if (participant.eventId) {
         const size = extractTshirtSizeCategory(participant.tShirtSize);
