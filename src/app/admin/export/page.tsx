@@ -85,9 +85,7 @@ export default function AdminExportPage() {
       <ScrollAwareHeader>
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <Link href="/dashboard" className="flex items-center gap-2">
-            <span className="grid size-8 place-items-center rounded-xl bg-gradient-to-br from-[#4C1D95] to-[#E11D48] text-xs font-semibold text-white shadow-sm">
-              B
-            </span>
+            <img src="/Real-logo.svg" alt="Bib Expo" className="h-10 w-auto object-contain sm:h-12" />
             <div className="flex flex-col">
               <span className="text-sm font-semibold">Bib Expo</span>
               <span className="text-[0.7rem] text-slate-500">Export Excel</span>
