@@ -85,6 +85,7 @@ function AdminLoginForm() {
           autoComplete="current-password"
           required
           error={error ?? undefined}
+          showPasswordToggle
         />
 
         <span className="text-xs text-[color:var(--muted-foreground)]">

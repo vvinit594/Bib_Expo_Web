@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 
 import { prisma } from "@/lib/db";
 import { getAuthUser } from "@/lib/auth-server";
+import { extractTshirtSizeCategory } from "@/lib/tshirt";
 import { ACTIVE_EVENT_COOKIE_NAME } from "@/lib/auth";
 
 export async function GET(request: Request) {
@@ -118,6 +119,7 @@ export async function GET(request: Request) {
         bibCollected: p.bibCollected,
         tshirtCollected: p.tshirtCollected,
         goodiesCollected: p.goodiesCollected,
+        tshirtSizeCategory: extractTshirtSizeCategory(p.tShirtSize) ?? undefined,
       };
     });
 

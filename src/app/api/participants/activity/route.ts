@@ -85,6 +85,7 @@ export async function GET() {
           bibNumber: true,
           participantName: true,
           itemType: true,
+          itemSize: true,
           collectedBy: true,
           counterName: true,
           createdAt: true,
@@ -135,11 +136,11 @@ export async function GET() {
       ts: row.createdAt.getTime(),
     }));
 
-    const itemLabel = (t: string) =>
-      t === "bib" ? "Bib" : t === "tshirt" ? "T-shirt" : "Goodies";
+    const itemLabel = (t: string, size?: string | null) =>
+      t === "bib" ? "Bib" : t === "tshirt" ? (size ? `T-shirt (Size ${size})` : "T-shirt") : "Goodies";
     const kitCollection: ActivityItem[] = kitLogs.map((row) => ({
       id: `kit-${row.id}`,
-      text: `${itemLabel(row.itemType)} collected for #${row.bibNumber} by ${row.counterName || row.collectedBy}`,
+      text: `${itemLabel(row.itemType, row.itemSize)} collected for Bib #${row.bibNumber} by ${row.counterName || row.collectedBy}`,
       time: row.createdAt.toLocaleTimeString("en-IN", {
         hour: "2-digit",
         minute: "2-digit",

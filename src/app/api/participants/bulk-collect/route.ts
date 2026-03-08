@@ -5,6 +5,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-server";
 import { sendCollectionEmail } from "@/lib/emailService";
+import { extractTshirtSizeCategory } from "@/lib/tshirt";
 import { ACTIVE_EVENT_COOKIE_NAME } from "@/lib/auth";
 
 const bulkCollectSchema = z.object({
@@ -111,6 +112,25 @@ export async function POST(request: Request) {
       if (fullyCollected) {
         skipped += 1;
         continue;
+      }
+      if (!participant.tshirtCollected && participant.eventId) {
+        const size = extractTshirtSizeCategory(participant.tShirtSize);
+        if (size) {
+          const event = await prisma.expoEvent.findUnique({
+            where: { id: participant.eventId },
+            select: { tshirtInventory: true },
+          });
+          const inv = (event?.tshirtInventory as Record<string, number> | null) ?? {};
+          const current = typeof inv[size] === "number" ? inv[size] : 0;
+          if (current <= 0) {
+            skipped += 1;
+            continue;
+          }
+          await prisma.expoEvent.update({
+            where: { id: participant.eventId },
+            data: { tshirtInventory: { ...inv, [size]: Math.max(0, current - 1) } },
+          });
+        }
       }
       const now = new Date();
       await prisma.participant.update({

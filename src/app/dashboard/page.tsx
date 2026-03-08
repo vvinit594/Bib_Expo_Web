@@ -31,6 +31,7 @@ type Participant = {
   bibCollected?: boolean;
   tshirtCollected?: boolean;
   goodiesCollected?: boolean;
+  tshirtSizeCategory?: string;
 };
 
 type AuthUser = {
@@ -77,6 +78,7 @@ export default function DashboardPage() {
     individualTotal?: number;
     individualCollected?: number;
     individualPending?: number;
+    tshirtInventory?: Record<string, number> | null;
   } | null>(null);
   const [behalfForm, setBehalfForm] = React.useState({
     name: "",
@@ -1199,6 +1201,25 @@ export default function DashboardPage() {
                 </div>
               </dl>
             </div>
+            {stats?.tshirtInventory && Object.keys(stats.tshirtInventory).length > 0 && (
+              <div className="mt-4 border-t border-slate-700/50 pt-4">
+                <p className="mb-2 text-[0.7rem] font-medium uppercase tracking-wide text-slate-400">
+                  T-Shirt Inventory
+                </p>
+                <dl className="space-y-1.5">
+                  {["XS", "S", "M", "L", "XL", "XXL", "XXXL"].map((size) => {
+                    const qty = stats.tshirtInventory![size] ?? 0;
+                    const indicator = qty === 0 ? "🔴" : qty <= 10 ? "🟡" : "🟢";
+                    return (
+                      <div key={size} className="flex items-center justify-between">
+                        <dt className="text-slate-400">{size} {indicator}</dt>
+                        <dd className="text-sm font-semibold text-white">{qty}</dd>
+                      </div>
+                    );
+                  })}
+                </dl>
+              </div>
+            )}
           </div>
 
           <div className="hidden rounded-2xl bg-white p-4 text-[0.75rem] text-slate-600 shadow-sm shadow-slate-900/5 ring-1 ring-slate-200 lg:block">
@@ -1306,6 +1327,25 @@ export default function DashboardPage() {
                     </div>
                   </dl>
                 </div>
+                {stats?.tshirtInventory && Object.keys(stats.tshirtInventory).length > 0 && (
+                  <div className="mt-4 border-t border-slate-700/50 pt-4">
+                    <p className="mb-2 text-[0.7rem] font-medium uppercase tracking-wide text-slate-400">
+                      T-Shirt Inventory
+                    </p>
+                    <dl className="space-y-1.5">
+                      {["XS", "S", "M", "L", "XL", "XXL", "XXXL"].map((size) => {
+                        const qty = stats.tshirtInventory![size] ?? 0;
+                        const indicator = qty === 0 ? "🔴" : qty <= 10 ? "🟡" : "🟢";
+                        return (
+                          <div key={size} className="flex items-center justify-between">
+                            <dt className="text-slate-400">{size} {indicator}</dt>
+                            <dd className="text-sm font-semibold text-white">{qty}</dd>
+                          </div>
+                        );
+                      })}
+                    </dl>
+                  </div>
+                )}
               </div>
               <div className="space-y-3 rounded-2xl bg-white p-4 shadow-sm shadow-slate-900/5 ring-1 ring-slate-200">
                 <div className="flex items-center justify-between text-sm">
@@ -1350,18 +1390,30 @@ export default function DashboardPage() {
                   {showKitModalFor.bibCollected ? "Bib: Already Collected ✓" : "☐ Bib Collect"}
                 </span>
               </label>
-              <label className={`flex items-center gap-3 rounded-lg border p-3 ${showKitModalFor.tshirtCollected ? "cursor-default border-emerald-200 bg-emerald-50" : "cursor-pointer border-slate-200 hover:bg-slate-50"}`}>
-                <input
-                  type="checkbox"
-                  checked={!!showKitModalFor.tshirtCollected || kitForm.tshirt}
-                  onChange={(e) => setKitForm((f) => ({ ...f, tshirt: e.target.checked }))}
-                  disabled={!!showKitModalFor.tshirtCollected}
-                  className="size-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 disabled:opacity-70"
-                />
-                <span className={`text-sm font-medium ${showKitModalFor.tshirtCollected ? "text-emerald-700" : "text-slate-700"}`}>
-                  {showKitModalFor.tshirtCollected ? "T-Shirt: Already Collected ✓" : "☐ T-Shirt Collect"}
-                </span>
-              </label>
+              {(() => {
+                const size = showKitModalFor.tshirtSizeCategory;
+                const qty = size && stats?.tshirtInventory ? (stats.tshirtInventory[size] ?? 0) : null;
+                const tshirtOutOfStock = size != null && qty !== null && qty <= 0 && !showKitModalFor.tshirtCollected;
+                return (
+                  <label className={`flex flex-col gap-1 rounded-lg border p-3 ${showKitModalFor.tshirtCollected ? "cursor-default border-emerald-200 bg-emerald-50" : tshirtOutOfStock ? "cursor-default border-amber-200 bg-amber-50/50" : "cursor-pointer border-slate-200 hover:bg-slate-50"}`}>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={!!showKitModalFor.tshirtCollected || kitForm.tshirt}
+                        onChange={(e) => setKitForm((f) => ({ ...f, tshirt: e.target.checked }))}
+                        disabled={!!showKitModalFor.tshirtCollected || !!tshirtOutOfStock}
+                        className="size-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 disabled:opacity-70"
+                      />
+                      <span className={`text-sm font-medium ${showKitModalFor.tshirtCollected ? "text-emerald-700" : tshirtOutOfStock ? "text-amber-800" : "text-slate-700"}`}>
+                        {showKitModalFor.tshirtCollected ? "T-Shirt: Already Collected ✓" : tshirtOutOfStock ? `☐ T-Shirt Collect (${size} out of stock)` : "☐ T-Shirt Collect"}
+                      </span>
+                    </div>
+                    {tshirtOutOfStock && (
+                      <p className="text-xs font-medium text-amber-700">⚠ {size} size T-shirts are out of stock</p>
+                    )}
+                  </label>
+                );
+              })()}
               <label className={`flex items-center gap-3 rounded-lg border p-3 ${showKitModalFor.goodiesCollected ? "cursor-default border-emerald-200 bg-emerald-50" : "cursor-pointer border-slate-200 hover:bg-slate-50"}`}>
                 <input
                   type="checkbox"

@@ -21,9 +21,10 @@ export async function GET() {
 
   try {
     const [eventRows, participantGroups, userGroups, cookieStore] = await Promise.all([
-      prisma.$queryRaw<{ id: string; name: string; eventDate: Date; createdAt: Date }[]>`
-        SELECT id, name, "eventDate", "createdAt" FROM "ExpoEvent" ORDER BY "createdAt" DESC
-      `,
+      prisma.expoEvent.findMany({
+        orderBy: { createdAt: "desc" },
+        select: { id: true, name: true, eventDate: true, createdAt: true, tshirtInventory: true },
+      }),
       prisma.participant.groupBy({
         by: ["eventId"],
         _count: { _all: true },
@@ -55,6 +56,7 @@ export async function GET() {
         name: e.name,
         eventDate: e.eventDate.toISOString(),
         createdAt: e.createdAt.toISOString(),
+        tshirtInventory: e.tshirtInventory as Record<string, number> | null,
         participantCount: participantCountByEvent.get(e.id) ?? 0,
         volunteerCount: volunteerCountByEvent.get(e.id) ?? 0,
         organizerCount: organizerCountByEvent.get(e.id) ?? 0,

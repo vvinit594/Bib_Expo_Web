@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 
 import { prisma } from "@/lib/db";
+import { extractTshirtSizeCategory } from "@/lib/tshirt";
 import { ACTIVE_EVENT_COOKIE_NAME } from "@/lib/auth";
 import { requireAdmin } from "@/lib/auth-server";
 
@@ -161,13 +162,32 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No valid participant rows found" }, { status: 400 });
     }
 
+    // Compute T-shirt inventory from Excel T-Shirt Size column (count per size)
+    const tshirtInventory: Record<string, number> = {
+      XS: 0,
+      S: 0,
+      M: 0,
+      L: 0,
+      XL: 0,
+      XXL: 0,
+      XXXL: 0,
+    };
+    for (const p of parsed) {
+      const size = extractTshirtSizeCategory(p.tShirtSize);
+      if (size && size in tshirtInventory) {
+        tshirtInventory[size]++;
+      }
+    }
+
     const setupResult = await prisma.$transaction(async (tx) => {
-      const createdRows = await tx.$queryRaw<{ id: string }[]>`
-        INSERT INTO "ExpoEvent" (id, name, "eventDate", "createdAt")
-        VALUES (gen_random_uuid(), ${eventName}, ${eventDate}, NOW())
-        RETURNING id
-      `;
-      const eventId = createdRows[0]?.id;
+      const event = await tx.expoEvent.create({
+        data: {
+          name: eventName,
+          eventDate,
+          tshirtInventory,
+        },
+      });
+      const eventId = event.id;
       if (!eventId) {
         throw new Error("Failed to create event");
       }

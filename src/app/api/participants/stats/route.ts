@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
 import { prisma } from "@/lib/db";
+import { extractTshirtSizeCategory } from "@/lib/tshirt";
 import { getAuthUser } from "@/lib/auth-server";
 import { ACTIVE_EVENT_COOKIE_NAME } from "@/lib/auth";
 
@@ -27,6 +28,37 @@ export async function GET() {
       auth.role === "ADMIN"
         ? adminEventId ? { eventId: adminEventId } : {}
         : { eventId: auth.eventId };
+
+    const eventId = auth.role === "ADMIN" ? adminEventId : auth.eventId;
+    const event = eventId
+      ? await prisma.expoEvent.findUnique({
+          where: { id: eventId },
+          select: { tshirtInventory: true },
+        })
+      : null;
+    let tshirtInventory = (event?.tshirtInventory as Record<string, number> | null) ?? null;
+
+    // Fallback for events created before auto-compute: derive from participants
+    if (!tshirtInventory && eventId) {
+      const participants = await prisma.participant.findMany({
+        where: { eventId },
+        select: { tShirtSize: true },
+      });
+      const base: Record<string, number> = { XS: 0, S: 0, M: 0, L: 0, XL: 0, XXL: 0, XXXL: 0 };
+      for (const p of participants) {
+        const size = extractTshirtSizeCategory(p.tShirtSize);
+        if (size && size in base) base[size]++;
+      }
+      const collected = await prisma.kitCollectionLog.findMany({
+        where: { eventId, itemType: "tshirt" },
+        select: { itemSize: true },
+      });
+      for (const c of collected) {
+        const size = (c.itemSize ?? "").trim().toUpperCase() || null;
+        if (size && size in base && base[size] > 0) base[size]--;
+      }
+      tshirtInventory = Object.keys(base).length > 0 ? base : null;
+    }
 
     const bulkFilter = { ...eventFilter, bulkTeam: { not: null } };
     const individualFilter = { ...eventFilter, OR: [{ bulkTeam: null }, { bulkTeam: "" }] };
@@ -125,6 +157,7 @@ export async function GET() {
       individualTotal,
       individualCollected,
       individualPending,
+      tshirtInventory,
     });
   } catch (err) {
     console.error("Stats error:", err);

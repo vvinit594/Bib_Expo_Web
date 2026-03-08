@@ -5,6 +5,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-server";
 import { sendCollectionEmail } from "@/lib/emailService";
+import { extractTshirtSizeCategory } from "@/lib/tshirt";
 import { ACTIVE_EVENT_COOKIE_NAME } from "@/lib/auth";
 
 const collectSchema = z.object({
@@ -141,6 +142,30 @@ export async function POST(
         data.bibCollectedBy = counterName;
       }
       if (items!.includes("tshirt") && !participant.tshirtCollected) {
+        const size = extractTshirtSizeCategory(participant.tShirtSize);
+        if (size && participant.eventId) {
+          const event = await prisma.expoEvent.findUnique({
+            where: { id: participant.eventId },
+            select: { tshirtInventory: true },
+          });
+          const inv = (event?.tshirtInventory as Record<string, number> | null) ?? {};
+          const current = typeof inv[size] === "number" ? inv[size] : 0;
+          if (current <= 0) {
+            return NextResponse.json(
+              { error: `${size} size T-shirts are out of stock` },
+              { status: 400 }
+            );
+          }
+          await prisma.expoEvent.update({
+            where: { id: participant.eventId },
+            data: {
+              tshirtInventory: {
+                ...inv,
+                [size]: Math.max(0, current - 1),
+              },
+            },
+          });
+        }
         data.tshirtCollected = true;
         data.tshirtCollectedAt = now;
         data.tshirtCollectedBy = counterName;
@@ -172,6 +197,7 @@ export async function POST(
           const key = item === "bib" ? "bibCollected" : item === "tshirt" ? "tshirtCollected" : "goodiesCollected";
           const prev = participant[key as keyof typeof participant];
           if (!prev) {
+            const size = item === "tshirt" ? extractTshirtSizeCategory(participant.tShirtSize) : null;
             await prisma.kitCollectionLog.create({
               data: {
                 eventId: participant.eventId,
@@ -179,6 +205,7 @@ export async function POST(
                 bibNumber: participant.bibNumber,
                 participantName: participant.name,
                 itemType: item,
+                itemSize: size,
                 collectedBy: counterName,
                 counterName: auth.counterName ?? null,
               },
@@ -187,6 +214,25 @@ export async function POST(
         }
       }
     } else {
+      if (participant.eventId) {
+        const size = extractTshirtSizeCategory(participant.tShirtSize);
+        if (size) {
+          const event = await prisma.expoEvent.findUnique({
+            where: { id: participant.eventId },
+            select: { tshirtInventory: true },
+          });
+          const inv = (event?.tshirtInventory as Record<string, number> | null) ?? {};
+          const current = typeof inv[size] === "number" ? inv[size] : 0;
+          if (current > 0) {
+            await prisma.expoEvent.update({
+              where: { id: participant.eventId },
+              data: {
+                tshirtInventory: { ...inv, [size]: Math.max(0, current - 1) },
+              },
+            });
+          }
+        }
+      }
       await prisma.participant.update({
         where: { id },
         data: {

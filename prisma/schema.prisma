@@ -36,12 +36,13 @@ enum ParticipantSource {
 }
 
 model ExpoEvent {
-  id           String        @id @default(uuid())
-  name         String
-  eventDate    DateTime      @default(now())
-  createdAt    DateTime      @default(now())
-  participants Participant[]
-  users        Volunteer[]
+  id               String        @id @default(uuid())
+  name             String
+  eventDate        DateTime      @default(now())
+  createdAt        DateTime      @default(now())
+  tshirtInventory  Json?
+  participants     Participant[]
+  users            Volunteer[]
 }
 
 model Participant {
@@ -133,15 +134,16 @@ model BulkTeamCollectionLog {
 }
 
 model KitCollectionLog {
-  id             String   @id @default(uuid())
-  eventId        String?
-  participantId  String
-  bibNumber      Int
-  participantName String
-  itemType       String
-  collectedBy    String
-  counterName    String?
-  createdAt      DateTime @default(now())
+  id                  String   @id @default(uuid())
+  eventId             String?
+  participantId       String
+  bibNumber           Int
+  participantName     String
+  itemType            String
+  itemSize            String?
+  collectedBy         String
+  counterName         String?
+  createdAt           DateTime @default(now())
 
   @@index([eventId])
   @@index([participantId])

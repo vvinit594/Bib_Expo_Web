@@ -87,6 +87,7 @@ function VolunteerLoginForm() {
           autoComplete="current-password"
           required
           error={error ?? undefined}
+          showPasswordToggle
         />
 
         <div className="flex items-center justify-between">
