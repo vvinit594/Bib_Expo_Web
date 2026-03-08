@@ -94,6 +94,8 @@ export default function DashboardPage() {
   const [showBulkModal, setShowBulkModal] = React.useState(false);
   const [selectedTeam, setSelectedTeam] = React.useState<string | null>(null);
   const [bulkTeamDropdownOpen, setBulkTeamDropdownOpen] = React.useState(false);
+  const [behalfRelationOpen, setBehalfRelationOpen] = React.useState(false);
+  const [bulkRelationOpen, setBulkRelationOpen] = React.useState(false);
   const [bulkForm, setBulkForm] = React.useState({
     name: "",
     contact: "",
@@ -328,6 +330,7 @@ export default function DashboardPage() {
         setShowBehalfModalFor(null);
         setBehalfForm({ name: "", contact: "", relation: "" });
         setBehalfKitForm({ bib: false, tshirt: false, goodies: false });
+        setBehalfRelationOpen(false);
         fetchParticipants();
         fetchActivities();
       }
@@ -370,6 +373,7 @@ export default function DashboardPage() {
         setShowBulkModal(false);
         setBulkForm({ name: "", contact: "", relation: "", idProof: "" });
         setBulkKitForm({ bib: false, tshirt: false, goodies: false });
+        setBulkRelationOpen(false);
         fetchParticipants();
         setTimeout(() => setBulkSuccessMessage(null), 5000);
       } else {
@@ -1709,12 +1713,68 @@ export default function DashboardPage() {
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-medium text-slate-700">Relation <span className="text-slate-400">(optional)</span></label>
-                <input
-                  value={bulkForm.relation}
-                  onChange={(e) => setBulkForm((f) => ({ ...f, relation: e.target.value }))}
-                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-rose-300 focus:bg-white focus:ring-2 focus:ring-rose-200"
-                  placeholder="Friend, family, coach..."
-                />
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setBulkRelationOpen((o) => !o)}
+                    className="flex h-9 w-full cursor-pointer items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 text-left text-sm transition-colors hover:border-slate-300 hover:bg-white focus:border-rose-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-rose-200"
+                  >
+                    <span className={bulkForm.relation ? "text-slate-800" : "text-slate-500"}>
+                      {bulkForm.relation || "Select relation"}
+                    </span>
+                    <svg
+                      className={`size-4 shrink-0 text-slate-500 transition ${bulkRelationOpen ? "rotate-180" : ""}`}
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06Z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  {bulkRelationOpen && (
+                    <>
+                      <button type="button" aria-label="Close" onClick={() => setBulkRelationOpen(false)} className="fixed inset-0 z-[100]" />
+                      <div className="absolute left-0 right-0 top-full z-[101] mt-1.5 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                        <p className="px-2.5 py-1 text-[0.65rem] font-medium uppercase tracking-wide text-slate-500">Relation</p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setBulkForm((f) => ({ ...f, relation: "" }));
+                            setBulkRelationOpen(false);
+                          }}
+                          className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-sm transition ${!bulkForm.relation ? "bg-emerald-50 text-emerald-700" : "text-slate-500 hover:bg-slate-50"}`}
+                        >
+                          Select relation
+                          {!bulkForm.relation && (
+                            <svg className="size-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M16.704 5.29a1 1 0 010 1.42l-7.29 7.29a1 1 0 01-1.415 0L3.29 9.29a1 1 0 111.415-1.415l4.002 4.002 6.584-6.585a1 1 0 011.414 0Z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </button>
+                        {["Friend", "Family", "Coach", "Other"].map((opt) => {
+                          const selected = bulkForm.relation === opt;
+                          return (
+                            <button
+                              key={opt}
+                              type="button"
+                              onClick={() => {
+                                setBulkForm((f) => ({ ...f, relation: opt }));
+                                setBulkRelationOpen(false);
+                              }}
+                              className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-sm transition ${selected ? "bg-emerald-50 text-emerald-700" : "text-slate-700 hover:bg-slate-50"}`}
+                            >
+                              {opt}
+                              {selected && (
+                                <svg className="size-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M16.704 5.29a1 1 0 010 1.42l-7.29 7.29a1 1 0 01-1.415 0L3.29 9.29a1 1 0 111.415-1.415l4.002 4.002 6.584-6.585a1 1 0 011.414 0Z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-medium text-slate-700">ID proof <span className="text-slate-400">(optional)</span></label>
@@ -1732,6 +1792,7 @@ export default function DashboardPage() {
                     setShowBulkModal(false);
                     setBulkForm({ name: "", contact: "", relation: "", idProof: "" });
                     setBulkKitForm({ bib: false, tshirt: false, goodies: false });
+                    setBulkRelationOpen(false);
                   }}
                   disabled={bulkCollecting}
                   className="inline-flex h-8 items-center justify-center rounded-full border border-slate-200 bg-white px-3 font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
@@ -1796,13 +1857,69 @@ export default function DashboardPage() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium text-slate-700">Relation</label>
-                <input
-                  value={behalfForm.relation}
-                  onChange={(e) => setBehalfForm((f) => ({ ...f, relation: e.target.value }))}
-                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-rose-300 focus:bg-white focus:ring-2 focus:ring-rose-200"
-                  placeholder="Friend, family, coach..."
-                />
+                <label className="text-xs font-medium text-slate-700">Relation <span className="text-slate-400">(optional)</span></label>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setBehalfRelationOpen((o) => !o)}
+                    className="flex h-9 w-full cursor-pointer items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 text-left text-sm transition-colors hover:border-slate-300 hover:bg-white focus:border-rose-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-rose-200"
+                  >
+                    <span className={behalfForm.relation ? "text-slate-800" : "text-slate-500"}>
+                      {behalfForm.relation || "Select relation"}
+                    </span>
+                    <svg
+                      className={`size-4 shrink-0 text-slate-500 transition ${behalfRelationOpen ? "rotate-180" : ""}`}
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06Z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  {behalfRelationOpen && (
+                    <>
+                      <button type="button" aria-label="Close" onClick={() => setBehalfRelationOpen(false)} className="fixed inset-0 z-[100]" />
+                      <div className="absolute left-0 right-0 top-full z-[101] mt-1.5 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                        <p className="px-2.5 py-1 text-[0.65rem] font-medium uppercase tracking-wide text-slate-500">Relation</p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setBehalfForm((f) => ({ ...f, relation: "" }));
+                            setBehalfRelationOpen(false);
+                          }}
+                          className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-sm transition ${!behalfForm.relation ? "bg-emerald-50 text-emerald-700" : "text-slate-500 hover:bg-slate-50"}`}
+                        >
+                          Select relation
+                          {!behalfForm.relation && (
+                            <svg className="size-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M16.704 5.29a1 1 0 010 1.42l-7.29 7.29a1 1 0 01-1.415 0L3.29 9.29a1 1 0 111.415-1.415l4.002 4.002 6.584-6.585a1 1 0 011.414 0Z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </button>
+                        {["Friend", "Family", "Coach", "Other"].map((opt) => {
+                          const selected = behalfForm.relation === opt;
+                          return (
+                            <button
+                              key={opt}
+                              type="button"
+                              onClick={() => {
+                                setBehalfForm((f) => ({ ...f, relation: opt }));
+                                setBehalfRelationOpen(false);
+                              }}
+                              className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-sm transition ${selected ? "bg-emerald-50 text-emerald-700" : "text-slate-700 hover:bg-slate-50"}`}
+                            >
+                              {opt}
+                              {selected && (
+                                <svg className="size-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M16.704 5.29a1 1 0 010 1.42l-7.29 7.29a1 1 0 01-1.415 0L3.29 9.29a1 1 0 111.415-1.415l4.002 4.002 6.584-6.585a1 1 0 011.414 0Z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
               <div className="mt-3 flex justify-end gap-2 text-xs">
                 <button
@@ -1811,6 +1928,7 @@ export default function DashboardPage() {
                     setShowBehalfModalFor(null);
                     setBehalfForm({ name: "", contact: "", relation: "" });
                     setBehalfKitForm({ bib: false, tshirt: false, goodies: false });
+                    setBehalfRelationOpen(false);
                   }}
                   className="inline-flex h-8 items-center justify-center rounded-full border border-slate-200 bg-white px-3 font-medium text-slate-600 hover:bg-slate-50"
                 >
