@@ -185,9 +185,11 @@ export default function AdminPage() {
   return (
     <div className="min-h-dvh bg-slate-50 text-slate-900">
       <ScrollAwareHeader>
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <Link href="/" className="flex items-center gap-2">
-            <img src="/Real-logo.svg" alt="Bib Expo" className="h-10 w-auto object-contain sm:h-12" />
+        <div className="mx-auto flex h-full w-full max-w-6xl items-center justify-between gap-6 px-4 sm:gap-8 sm:px-6">
+          <Link href="/" className="flex shrink-0 items-center gap-4">
+            <div className="flex h-12 w-40 shrink-0 items-center overflow-hidden sm:w-48">
+              <img src="/Real-logo.svg" alt="Bib Expo" className="h-full w-auto max-w-full object-contain object-left" />
+            </div>
             <div className="flex flex-col">
               <span className="text-sm font-semibold">Bib Expo</span>
               <span className="text-[0.7rem] text-slate-500">{isOrganizer ? "Organizer Panel" : "Admin Panel"}</span>

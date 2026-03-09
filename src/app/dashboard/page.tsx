@@ -442,11 +442,15 @@ export default function DashboardPage() {
   return (
     <div className="min-h-dvh bg-slate-50 text-slate-900">
       {/* Top nav */}
-      <ScrollAwareHeader forceVisible={mobileMenuOpen}>
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-2">
-            <img src="/Real-logo.svg" alt="Bib Expo" className="h-10 w-auto object-contain sm:h-12" />
-            <div className="flex flex-col">
+      <ScrollAwareHeader forceVisible={mobileMenuOpen} className="h-auto min-h-14">
+        <div className="flex w-full flex-col">
+          <div className="flex h-14 min-h-14 w-full shrink-0 items-center justify-center">
+            <div className="flex h-full w-full max-w-6xl flex-nowrap items-center justify-between gap-6 px-4 sm:gap-8 sm:px-6">
+          <div className="flex min-w-0 shrink-0 items-center gap-4">
+            <div className="flex h-12 w-40 shrink-0 items-center overflow-hidden sm:w-48">
+              <img src="/Real-logo.svg" alt="Bib Expo" className="h-full w-auto max-w-full object-contain object-left" />
+            </div>
+            <div className="flex min-w-0 flex-col">
               <span className="text-sm font-semibold">Bib Expo</span>
               <span className="text-[0.7rem] text-slate-500">
                 {isAdmin ? "Admin Dashboard" : user?.role === "ORGANIZER" ? "Organizer Dashboard" : "Volunteer Dashboard"}
@@ -454,8 +458,8 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="hidden items-center gap-3 md:flex">
-            <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm">
+          <div className="hidden shrink-0 items-center gap-4 md:flex">
+            <span className="inline-flex h-9 min-h-9 shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-700 shadow-sm">
               <span className="size-2 rounded-full bg-emerald-500" />
               <span>
                 {eventName ?? "No Active Event"}
@@ -540,28 +544,28 @@ export default function DashboardPage() {
             )}
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Desktop: inline admin controls + user info */}
+          <div className="flex min-w-0 shrink items-center gap-4">
+            {/* Desktop: admin controls + user info - all h-9 aligned */}
             {isAdmin && (
               <>
-                <span className="hidden rounded-full bg-amber-100 px-3 py-1 text-[0.7rem] font-semibold text-amber-800 md:inline-flex">
+                <span className="hidden h-9 min-h-9 shrink-0 items-center rounded-full bg-amber-100 px-3 text-[0.7rem] font-semibold text-amber-800 md:inline-flex">
                   Admin
                 </span>
                 <Link
                   href="/admin/events"
-                  className="hidden rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 md:inline-flex"
+                  className="hidden h-9 min-h-9 shrink-0 items-center rounded-full border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 md:inline-flex whitespace-nowrap"
                 >
                   Event Setup
                 </Link>
                 <Link
                   href="/admin"
-                  className="hidden rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 md:inline-flex"
+                  className="hidden h-9 min-h-9 shrink-0 items-center rounded-full border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 md:inline-flex whitespace-nowrap"
                 >
                   Manage Users
                 </Link>
                 <Link
                   href="/admin/export"
-                  className="hidden rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 md:inline-flex"
+                  className="hidden h-9 min-h-9 shrink-0 items-center rounded-full border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 md:inline-flex whitespace-nowrap"
                 >
                   Export Excel
                 </Link>
@@ -570,13 +574,13 @@ export default function DashboardPage() {
             {user?.role === "ORGANIZER" && (
               <Link
                 href="/admin"
-                className="hidden rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 md:inline-flex"
+                className="hidden h-9 min-h-9 shrink-0 items-center rounded-full border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 md:inline-flex whitespace-nowrap"
               >
                 Manage Volunteers
               </Link>
             )}
-            <div className="hidden items-end gap-2 text-xs md:flex">
-              <div className="flex flex-col items-end">
+            <div className="hidden shrink-0 items-center gap-2 text-xs md:flex">
+              <div className="flex flex-col items-end justify-center">
                 <span className="font-medium text-slate-900">
                   {user?.counterName ?? "Counter 4 – 10K"}
                 </span>
@@ -584,10 +588,22 @@ export default function DashboardPage() {
                   {isAdmin ? "Admin" : user?.role === "ORGANIZER" ? "Organizer" : "Volunteer"}: {user?.name ?? "—"}
                 </span>
               </div>
-              <span className="grid size-8 place-items-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700">
+              <span className="grid size-8 shrink-0 place-items-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700">
                 {user?.name?.charAt(0)?.toUpperCase() ?? "—"}
               </span>
             </div>
+
+            <button
+              type="button"
+              onClick={async () => {
+                await fetch("/api/auth/logout", { method: "POST" });
+                router.push("/");
+                router.refresh();
+              }}
+              className="hidden h-9 min-h-9 shrink-0 items-center rounded-full border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 md:inline-flex whitespace-nowrap"
+            >
+              Logout
+            </button>
 
             {/* Mobile/tablet: Stats button + menu toggle + dropdown */}
             <div className="relative flex items-center gap-2 md:hidden">
@@ -771,39 +787,29 @@ export default function DashboardPage() {
                 </>
               )}
             </div>
-
-            <button
-              type="button"
-              onClick={async () => {
-                await fetch("/api/auth/logout", { method: "POST" });
-                router.push("/");
-                router.refresh();
-              }}
-              className="hidden rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 md:inline-flex"
-            >
-              Logout
-            </button>
           </div>
         </div>
+          </div>
 
-        {/* Live status strip */}
-        <div className="border-t border-slate-200 bg-slate-50/80">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-2 text-[0.75rem] text-slate-600 sm:px-6">
-            <div className="flex flex-wrap items-center gap-4">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-[0.7rem] font-medium text-emerald-700 ring-1 ring-emerald-100">
-                <span className="size-1.5 rounded-full bg-emerald-500" />
-                System Status: Online · Synced
-              </span>
-              <span>Active Volunteers: {volunteerCount ?? "—"}</span>
-            </div>
-            <div className="flex items-center gap-2 text-[0.7rem] text-slate-500">
+        {/* Live status strip - single row: System Status, Active Volunteers, Auto sync */}
+        <div className="w-full shrink-0 border-t border-slate-200 bg-slate-50/80">
+          <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-6 px-4 py-3 sm:px-6">
+            <span className="inline-flex h-9 items-center gap-2 rounded-full bg-emerald-50 px-3 text-xs font-medium text-emerald-700 ring-1 ring-emerald-100">
+              <span className="size-2 rounded-full bg-emerald-500" />
+              System Status: Online · Synced
+            </span>
+            <span className="text-xs font-medium text-slate-700">
+              Active Volunteers: {volunteerCount ?? "—"}
+            </span>
+            <span className="inline-flex items-center gap-2 text-xs font-medium text-slate-600">
               <span className="relative inline-flex size-2.5 items-center justify-center">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400/60" />
                 <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
               </span>
-              <span>Auto sync · Last synced 2 sec ago</span>
-            </div>
+              Auto sync · Last synced 2 sec ago
+            </span>
           </div>
+        </div>
         </div>
       </ScrollAwareHeader>
 

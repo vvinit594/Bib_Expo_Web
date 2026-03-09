@@ -39,7 +39,7 @@ export function ScrollAwareHeader({ children, className = "", forceVisible = fal
     <>
       <header
         ref={headerRef}
-        className={`fixed left-0 right-0 top-0 z-50 w-full transform border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur transition-transform duration-300 ease-out ${className}`}
+        className={`fixed left-0 right-0 top-0 z-50 flex h-14 w-full min-h-14 items-center justify-center transform border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur transition-transform duration-300 ease-out ${className}`}
         style={{
           transform: isVisible ? "translateY(0)" : "translateY(-100%)",
         }}
@@ -47,7 +47,7 @@ export function ScrollAwareHeader({ children, className = "", forceVisible = fal
         {children}
       </header>
       {/* Spacer preserves layout so content does not jump */}
-      <div style={{ height: headerHeight || "var(--header-fallback, 120px)" }} aria-hidden="true" />
+      <div style={{ height: headerHeight || "var(--header-fallback, 56px)" }} aria-hidden="true" />
     </>
   );
 }
