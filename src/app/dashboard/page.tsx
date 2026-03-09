@@ -447,9 +447,6 @@ export default function DashboardPage() {
           <div className="flex h-14 min-h-14 w-full shrink-0 items-center justify-center">
             <div className="flex h-full w-full max-w-6xl flex-nowrap items-center justify-between gap-6 px-4 sm:gap-8 sm:px-6">
           <div className="flex min-w-0 shrink-0 items-center gap-4">
-            <div className="flex h-12 w-40 shrink-0 items-center overflow-hidden sm:w-48">
-              <img src="/Real-logo.svg" alt="Bib Expo" className="h-full w-auto max-w-full object-contain object-left" />
-            </div>
             <div className="flex min-w-0 flex-col">
               <span className="text-sm font-semibold">Bib Expo</span>
               <span className="text-[0.7rem] text-slate-500">
@@ -1021,12 +1018,6 @@ export default function DashboardPage() {
                     <p><span className="font-medium text-slate-700">Gender:</span> {p.gender || "—"}</p>
                     <p><span className="font-medium text-slate-700">T-Shirt Size:</span> {p.tShirtSize || "—"}</p>
                     <p>
-                      <span className="font-medium text-slate-700">Payment Status:</span>{" "}
-                      <span className={p.paymentStatus === "paid" ? "text-emerald-600 font-medium" : "text-amber-600 font-medium"}>
-                        {p.paymentStatus === "paid" ? "Paid" : "Pending"}
-                      </span>
-                    </p>
-                    <p>
                       <span className="font-medium text-slate-700">Collection Status:</span>{" "}
                       {p.status === "pending"
                         ? "Pending"
@@ -1034,9 +1025,15 @@ export default function DashboardPage() {
                           ? "On-spot"
                           : p.status === "partially-collected"
                             ? "Partially Collected"
-                            : p.collectedBy
-                              ? `Collected (${p.collectedBy})`
-                              : "Collected"}
+                            : (() => {
+                                const behalf = p.collectedBy?.match(/^Behalf \((.+)\)$/);
+                                const bulk = p.collectedBy?.match(/^Bulk \((.+)\)$/);
+                                const bulkTeam = p.collectedBy?.match(/^Bulk Team \((.+)\)$/);
+                                if (behalf) return `Collected on Behalf by ${behalf[1]}`;
+                                if (bulk) return `Collected on Bulk by ${bulk[1]}`;
+                                if (bulkTeam) return `Collected on Bulk by ${bulkTeam[1]}`;
+                                return p.collectedBy && p.collectedBy !== "Self" ? `Collected (${p.collectedBy})` : "Collected";
+                              })()}
                     </p>
                     <div className="col-span-full rounded-lg border border-slate-200 bg-white p-2">
                       <p className="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500">
@@ -1071,12 +1068,6 @@ export default function DashboardPage() {
                     ) : (
                       <p><span className="font-medium text-slate-700">Collected Time:</span> —</p>
                     )}
-                    <p>
-                      <span className="font-medium text-slate-700">Email Verification:</span>{" "}
-                      <span className={p.emailVerified ? "text-emerald-600 font-medium" : "text-slate-500"}>
-                        {p.emailVerified ? "Verified" : "Not verified"}
-                      </span>
-                    </p>
                   </div>
 
                   <div className="flex flex-col gap-2 pt-1 text-[0.75rem] sm:flex-row sm:items-center sm:justify-between">
