@@ -29,6 +29,17 @@ export async function POST(
   try {
     const { id } = await params;
 
+    let customPassword: string | null = null;
+    try {
+      const body = await _request.json().catch(() => ({}));
+      const pw = body?.customPassword;
+      if (typeof pw === "string" && pw.trim().length >= 6) {
+        customPassword = pw.trim();
+      }
+    } catch {
+      // ignore
+    }
+
     const volunteer = await prisma.volunteer.findUnique({
       where: { id },
     });
@@ -73,7 +84,7 @@ export async function POST(
       );
     }
 
-    const newPassword = generateTempPassword();
+    const newPassword = customPassword ?? generateTempPassword();
     const passwordHash = await bcrypt.hash(newPassword, 10);
 
     await prisma.volunteer.update({

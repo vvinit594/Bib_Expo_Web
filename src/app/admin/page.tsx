@@ -52,6 +52,7 @@ export default function AdminPage() {
   const [resetting, setResetting] = React.useState(false);
   const [resetSuccess, setResetSuccess] = React.useState(false);
   const [copyFeedback, setCopyFeedback] = React.useState(false);
+  const [manualPassword, setManualPassword] = React.useState("");
 
   const volunteerUsers = React.useMemo(
     () => volunteers.filter((v) => v.role === "VOLUNTEER"),
@@ -197,10 +198,42 @@ export default function AdminPage() {
   }
 
   function handleCopyPassword() {
-    if (resetPasswordResult?.newPassword) {
-      void navigator.clipboard.writeText(resetPasswordResult.newPassword);
+    const pw = manualPassword.trim() || resetPasswordResult?.newPassword;
+    if (pw) {
+      void navigator.clipboard.writeText(pw);
       setCopyFeedback(true);
       setTimeout(() => setCopyFeedback(false), 2000);
+    }
+  }
+
+  const effectivePassword = manualPassword.trim() || resetPasswordResult?.newPassword;
+
+  async function handleConfirmReset() {
+    if (manualPassword.trim().length >= 6 && resetPasswordFor) {
+      setResetting(true);
+      try {
+        const res = await fetch(`/api/admin/volunteers/${resetPasswordFor.id}/reset-password`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ customPassword: manualPassword.trim() }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setResetPasswordResult({ newPassword: manualPassword.trim() });
+          setManualPassword("");
+          setResetSuccess(true);
+          setTimeout(() => handleConfirmResetClose(), 1500);
+        } else {
+          setError(data.error ?? "Failed to set password");
+        }
+      } catch {
+        setError("Failed to set password.");
+      } finally {
+        setResetting(false);
+      }
+    } else {
+      setResetSuccess(true);
+      setTimeout(() => handleConfirmResetClose(), 1500);
     }
   }
 
@@ -208,6 +241,7 @@ export default function AdminPage() {
     setResetPasswordFor(null);
     setResetPasswordResult(null);
     setResetSuccess(false);
+    setManualPassword("");
   }
 
   async function handleDeleteConfirm() {
@@ -835,8 +869,24 @@ export default function AdminPage() {
                   New Password
                 </label>
                 <p className="mt-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-sm font-medium text-slate-900">
-                  {resetPasswordResult.newPassword}
+                  {effectivePassword}
                 </p>
+              </div>
+              <div className="mt-4">
+                <label htmlFor="manual-password" className="block text-xs font-medium text-slate-500">
+                  Or use manual password
+                </label>
+                <input
+                  id="manual-password"
+                  type="text"
+                  value={manualPassword}
+                  onChange={(e) => setManualPassword(e.target.value)}
+                  placeholder="Enter a custom password (min. 6 characters)"
+                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-200"
+                />
+                {manualPassword.trim().length > 0 && manualPassword.trim().length < 6 && (
+                  <p className="mt-1 text-xs text-amber-600">Minimum 6 characters required</p>
+                )}
               </div>
               {resetSuccess && (
                 <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
@@ -853,13 +903,11 @@ export default function AdminPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setResetSuccess(true);
-                    setTimeout(() => handleConfirmResetClose(), 1500);
-                  }}
-                  className="flex-1 rounded-xl bg-[#E11D48] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#BE123C]"
+                  onClick={handleConfirmReset}
+                  disabled={resetting || (manualPassword.trim().length > 0 && manualPassword.trim().length < 6)}
+                  className="flex-1 rounded-xl bg-[#E11D48] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#BE123C] disabled:opacity-60"
                 >
-                  Confirm Reset
+                  {resetting ? "Setting..." : "Confirm Reset"}
                 </button>
               </div>
             </div>

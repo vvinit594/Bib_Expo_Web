@@ -7,14 +7,14 @@ export default function Home() {
     <div className="min-h-dvh bg-[radial-gradient(circle_at_top,#4C1D95_0%,#E11D48_45%,#7F1D1D_100%)] text-slate-900">
       <Navbar />
 
-      <main className="mx-auto flex max-w-6xl flex-col gap-16 px-4 pb-12 pt-10 sm:px-6 sm:pb-16 sm:pt-16 lg:gap-20 lg:pb-20">
+      <main className="mx-auto flex max-w-6xl flex-col gap-6 px-4 pb-8 pt-5 sm:px-6 sm:pt-6">
         {/* Hero (single, centered section) */}
         <section className="mx-auto flex max-w-3xl flex-col items-center text-center">
-          <div className="w-full rounded-3xl bg-white/95 px-6 py-10 shadow-2xl shadow-slate-900/25 ring-1 ring-white/60 backdrop-blur-md sm:px-10 sm:py-12">
+          <div className="w-full rounded-3xl bg-white/95 px-6 py-8 shadow-2xl shadow-slate-900/25 ring-1 ring-white/60 backdrop-blur-md sm:px-10 sm:py-10">
             <p className="inline-flex rounded-full bg-rose-50 px-3 py-1 text-xs font-medium text-rose-600 shadow-sm ring-1 ring-rose-100">
               Built for Marathon Expo Operations
             </p>
-            <div className="mt-6 space-y-4">
+            <div className="mt-4 space-y-3">
               <h1 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl lg:text-[2.5rem] lg:leading-[1.1]">
                 Smart Bib Distribution Made Simple
               </h1>
@@ -25,7 +25,7 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
               <Link
                 href="/organizer-login"
                 className="inline-flex h-11 items-center justify-center rounded-full bg-[#E11D48] px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-[#BE123C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200"
@@ -40,7 +40,7 @@ export default function Home() {
               </Link>
             </div>
 
-            <div className="mt-6 flex flex-wrap justify-center gap-6 text-xs text-slate-600">
+            <div className="mt-5 flex flex-wrap justify-center gap-6 text-xs text-slate-600">
               <div className="space-y-1">
                 <p className="font-semibold text-slate-900">Expo-ready</p>
                 <p>Built for high-volume race day bib distribution.</p>
@@ -53,15 +53,51 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Minimal footer */}
-        <footer className="mt-6 flex flex-col items-start justify-between gap-3 border-t border-white/20 pt-4 text-[0.75rem] text-slate-100 sm:flex-row sm:items-center">
-          <div className="space-y-1">
-            <p className="font-medium text-white">Bib Expo</p>
-            <p className="text-slate-100/80">
-              Operational toolkit for real-time bib distribution.
-            </p>
+        {/* Footer */}
+        <footer className="flex flex-col gap-4 border-t border-white/20 pt-6 pb-8 text-[0.75rem] text-slate-100">
+          <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+            <div className="space-y-1">
+              <p className="font-medium text-white">Bib Expo</p>
+              <p className="text-slate-100/80">
+                Operational toolkit for real-time bib distribution.
+              </p>
+            </div>
+            <p className="text-slate-100/80">© 2026 Bib Expo Management.</p>
           </div>
-          <p className="text-slate-100/80">© 2026 Bib Expo Management.</p>
+
+          {/* Branding section */}
+          <div className="mx-auto flex max-w-[1000px] flex-col items-stretch gap-[30px] border-t border-white/10 pt-6 text-center sm:flex-row sm:justify-between sm:items-center sm:gap-[120px]">
+            {/* Left: Powered by Fitskol */}
+            <div className="flex flex-1 flex-col items-center">
+              <p className="mb-[10px] text-[14px] font-semibold tracking-[0.5px] text-slate-100 opacity-90">
+                Powered by Fitskol
+              </p>
+              <div className="mt-5 flex h-[120px] w-[260px] shrink-0 items-center justify-center">
+                <img
+                  src="/brand_logo.jpeg"
+                  alt="Fitskol"
+                  className="max-h-full max-w-full object-contain transition-transform duration-200 ease-in-out hover:scale-105"
+                />
+              </div>
+            </div>
+
+            {/* Vertical divider - hidden on mobile */}
+            <div className="hidden h-20 w-px shrink-0 self-center bg-white/20 sm:block" aria-hidden />
+
+            {/* Right: Supported by BookMyRun */}
+            <div className="flex flex-1 flex-col items-center">
+              <p className="mb-[10px] text-[14px] font-semibold tracking-[0.5px] text-slate-100 opacity-90">
+                Supported by BookMyRun
+              </p>
+              <div className="mt-5 flex h-[120px] w-[260px] shrink-0 items-center justify-center">
+                <img
+                  src="/bookmyrunlogo.jpeg"
+                  alt="BookMyRun"
+                  className="max-h-full max-w-full object-contain transition-transform duration-200 ease-in-out hover:scale-105"
+                />
+              </div>
+            </div>
+          </div>
         </footer>
       </main>
     </div>
