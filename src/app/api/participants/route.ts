@@ -24,34 +24,48 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const q = searchParams.get("q")?.trim().toLowerCase() ?? "";
+    const team = searchParams.get("team")?.trim() ?? null;
+    const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "50", 10)));
     const cookieStore = await cookies();
     const adminEventId = cookieStore.get(ACTIVE_EVENT_COOKIE_NAME)?.value ?? null;
-    const eventFilter =
+    const eventFilter: Record<string, unknown> =
       auth.role === "ADMIN"
         ? adminEventId ? { eventId: adminEventId } : {}
         : { eventId: auth.eventId };
 
-    const participants = await prisma.participant.findMany({
-      where: eventFilter,
-      orderBy: { bibNumber: "asc" },
-      include: {
-        collectedByVolunteer: { select: { name: true } },
-      },
-    });
-
-    let filtered = participants;
+    const searchOr: Record<string, unknown>[] = [];
     if (q) {
-      filtered = participants.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.bibNumber.toString().includes(q) ||
-          (p.category?.toLowerCase().includes(q)) ||
-          (p.groupName?.toLowerCase().includes(q)) ||
-          (p.email?.toLowerCase().includes(q))
+      searchOr.push(
+        { name: { contains: q, mode: "insensitive" as const } },
+        { email: { contains: q, mode: "insensitive" as const } },
+        { category: { contains: q, mode: "insensitive" as const } },
+        { groupName: { contains: q, mode: "insensitive" as const } }
       );
+      const bibNum = parseInt(q, 10);
+      if (!Number.isNaN(bibNum)) searchOr.push({ bibNumber: bibNum });
     }
 
-    const mapped = filtered.map((p) => {
+    const where = {
+      ...eventFilter,
+      ...(team ? { bulkTeam: team } : {}),
+      ...(searchOr.length > 0 ? { OR: searchOr } : {}),
+    };
+
+    const [totalCount, participants] = await Promise.all([
+      prisma.participant.count({ where }),
+      prisma.participant.findMany({
+        where,
+        orderBy: { bibNumber: "asc" },
+        skip: (page - 1) * limit,
+        take: limit,
+        include: {
+          collectedByVolunteer: { select: { name: true } },
+        },
+      }),
+    ]);
+
+    const mapped = participants.map((p) => {
       const allKitCollected = p.bibCollected && p.tshirtCollected && p.goodiesCollected;
       const anyKitCollected = p.bibCollected || p.tshirtCollected || p.goodiesCollected;
       // Normalized status for UI:
@@ -123,7 +137,14 @@ export async function GET(request: Request) {
       };
     });
 
-    return NextResponse.json({ participants: mapped });
+    const totalPages = Math.ceil(totalCount / limit);
+    return NextResponse.json({
+      participants: mapped,
+      totalCount,
+      page,
+      limit,
+      totalPages,
+    });
   } catch (err) {
     console.error("Participants list error:", err);
     return NextResponse.json(

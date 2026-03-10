@@ -60,6 +60,9 @@ export default function DashboardPage() {
   const [query, setQuery] = React.useState("");
   const [participants, setParticipants] = React.useState<Participant[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [page, setPage] = React.useState(1);
+  const [totalCount, setTotalCount] = React.useState(0);
+  const [totalPages, setTotalPages] = React.useState(0);
   const [showBehalfModalFor, setShowBehalfModalFor] = React.useState<Participant | null>(null);
   const [showKitModalFor, setShowKitModalFor] = React.useState<Participant | null>(null);
   const [collectionFlow, setCollectionFlow] = React.useState<"mark" | "behalf" | "bulk" | null>("mark");
@@ -91,6 +94,7 @@ export default function DashboardPage() {
     relation: "",
   });
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
+  const [expandedParticipants, setExpandedParticipants] = React.useState<Record<string, boolean>>({});
   const [showBulkModal, setShowBulkModal] = React.useState(false);
   const [selectedTeam, setSelectedTeam] = React.useState<string | null>(null);
   const [bulkTeamDropdownOpen, setBulkTeamDropdownOpen] = React.useState(false);
@@ -169,6 +173,12 @@ export default function DashboardPage() {
       return next;
     });
   };
+  const toggleParticipantExpanded = (id: string) => {
+    setExpandedParticipants((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
   const selectedCount = selectedIds.size;
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
@@ -202,19 +212,31 @@ export default function DashboardPage() {
 
   const fetchParticipants = React.useCallback(() => {
     setLoading(true);
-    const q = query.trim() ? `?q=${encodeURIComponent(query)}` : "";
-    fetch(`/api/participants${q}`)
+    const params = new URLSearchParams();
+    if (query.trim()) params.set("q", query.trim());
+    if (selectedTeam) params.set("team", selectedTeam);
+    params.set("page", String(page));
+    params.set("limit", "50");
+    fetch(`/api/participants?${params.toString()}`)
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data?.participants)) {
           setParticipants(data.participants);
+          setTotalCount(data.totalCount ?? 0);
+          setTotalPages(data.totalPages ?? 1);
         } else {
           setParticipants([]);
+          setTotalCount(0);
+          setTotalPages(1);
         }
       })
-      .catch(() => setParticipants([]))
+      .catch(() => {
+        setParticipants([]);
+        setTotalCount(0);
+        setTotalPages(1);
+      })
       .finally(() => setLoading(false));
-  }, [query]);
+  }, [query, page, selectedTeam]);
 
   React.useEffect(() => {
     fetch("/api/auth/me")
@@ -222,6 +244,10 @@ export default function DashboardPage() {
       .then((data) => data?.user && setUser(data.user))
       .catch(() => {});
   }, []);
+
+  React.useEffect(() => {
+    setPage(1);
+  }, [query, selectedTeam]);
 
   React.useEffect(() => {
     const t = setTimeout(fetchParticipants, 300);
@@ -428,12 +454,7 @@ export default function DashboardPage() {
     }
   }
 
-  const filtered = React.useMemo(() => {
-    if (selectedTeam) {
-      return participants.filter((p) => p.bulkTeam === selectedTeam);
-    }
-    return participants;
-  }, [participants, selectedTeam]);
+  const filtered = participants;
 
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -1008,11 +1029,29 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  <div className="grid gap-2 rounded-xl bg-slate-50/80 p-3 text-[0.72rem] text-slate-600 sm:grid-cols-2 lg:grid-cols-3">
-                    <p><span className="font-medium text-slate-700">Full Name:</span> {p.name}</p>
-                    <p><span className="font-medium text-slate-700">Bib Number:</span> {p.bib}</p>
+                  {/* Mobile summary: key contact info + toggle */}
+                  <div className="mt-2 space-y-1 text-[0.72rem] text-slate-600 sm:hidden">
                     <p><span className="font-medium text-slate-700">Email ID:</span> {p.email || "—"}</p>
                     <p><span className="font-medium text-slate-700">Phone Number:</span> {p.phone || "—"}</p>
+                    <button
+                      type="button"
+                      onClick={() => toggleParticipantExpanded(p.id)}
+                      className="mt-1 inline-flex items-center text-[0.72rem] font-medium text-slate-700 underline-offset-2 hover:underline"
+                      aria-expanded={!!expandedParticipants[p.id]}
+                    >
+                      {expandedParticipants[p.id] ? "Show Less ▲" : "Show More ▼"}
+                    </button>
+                  </div>
+
+                  <div
+                    className={`grid gap-2 rounded-xl bg-slate-50/80 p-3 text-[0.72rem] text-slate-600 sm:grid-cols-2 lg:grid-cols-3 ${
+                      expandedParticipants[p.id] ? "" : "hidden sm:grid"
+                    }`}
+                  >
+                    <p><span className="font-medium text-slate-700">Full Name:</span> {p.name}</p>
+                    <p><span className="font-medium text-slate-700">Bib Number:</span> {p.bib}</p>
+                    <p className="hidden sm:block"><span className="font-medium text-slate-700">Email ID:</span> {p.email || "—"}</p>
+                    <p className="hidden sm:block"><span className="font-medium text-slate-700">Phone Number:</span> {p.phone || "—"}</p>
                     <p><span className="font-medium text-slate-700">Age:</span> {p.age || "—"}</p>
                     <p><span className="font-medium text-slate-700">Event Category:</span> {p.category || "—"}</p>
                     <p><span className="font-medium text-slate-700">Gender:</span> {p.gender || "—"}</p>
@@ -1070,7 +1109,11 @@ export default function DashboardPage() {
                     )}
                   </div>
 
-                  <div className="flex flex-col gap-2 pt-1 text-[0.75rem] sm:flex-row sm:items-center sm:justify-between">
+                  <div
+                    className={`gap-2 pt-1 text-[0.75rem] sm:flex-row sm:items-center sm:justify-between ${
+                      expandedParticipants[p.id] ? "flex flex-col" : "hidden sm:flex"
+                    }`}
+                  >
                     {p.bulkTeam ? (
                       <span className="text-[0.7rem] text-slate-500">
                         Bulk team: {p.bulkTeam}
@@ -1143,6 +1186,54 @@ export default function DashboardPage() {
                   </div>
                 </article>
               ))}
+
+              {/* Pagination */}
+              {totalPages > 1 && !loading && (
+                <div className="flex flex-wrap items-center justify-center gap-2 py-4">
+                  <button
+                    type="button"
+                    onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                    disabled={page <= 1}
+                    className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Previous
+                  </button>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let p: number;
+                      if (totalPages <= 5) p = i + 1;
+                      else if (page <= 3) p = i + 1;
+                      else if (page >= totalPages - 2) p = totalPages - 4 + i;
+                      else p = page - 2 + i;
+                      return (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => setPage(p)}
+                          className={`inline-flex h-9 min-w-9 items-center justify-center rounded-lg border text-sm font-medium transition ${
+                            page === p
+                              ? "border-[#E11D48] bg-[#E11D48] text-white"
+                              : "border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                    disabled={page >= totalPages}
+                    className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
+                  <span className="ml-2 text-[0.7rem] text-slate-500">
+                    Page {page} of {totalPages} · {totalCount} total
+                  </span>
+                </div>
+              )}
 
               {loading && (
                 <p className="py-6 text-center text-sm text-slate-500">Loading...</p>
