@@ -18,7 +18,7 @@ export async function GET() {
 
   try {
     let activeEventId: string | null;
-    if (auth.role === "ORGANIZER") {
+    if (auth.role === "ORGANIZER" || auth.role === "SUPER_ORGANIZER") {
       activeEventId = auth.eventId;
     } else {
       const cookieStore = await cookies();

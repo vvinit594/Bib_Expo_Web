@@ -31,7 +31,7 @@ export async function requireAdmin(): Promise<AuthUser> {
 
 export async function requireOrganizerOrAdmin(): Promise<AuthUser> {
   const user = await requireAuth();
-  if (user.role !== "ADMIN" && user.role !== "ORGANIZER") {
+  if (user.role !== "ADMIN" && user.role !== "ORGANIZER" && user.role !== "SUPER_ORGANIZER") {
     throw new Error("Forbidden");
   }
   return user;

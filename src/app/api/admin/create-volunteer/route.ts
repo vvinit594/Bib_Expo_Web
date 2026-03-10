@@ -10,7 +10,7 @@ const createVolunteerSchema = z.object({
   phone: z.string().regex(/^[6-9]\d{9}$/, "Phone number must be a valid 10-digit Indian mobile number"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   counterName: z.string().optional(),
-  role: z.enum(["VOLUNTEER", "ORGANIZER"]).default("VOLUNTEER"),
+  role: z.enum(["VOLUNTEER", "ORGANIZER", "SUPER_ORGANIZER"]).default("VOLUNTEER"),
   eventId: z.string().uuid("Event is required").optional(),
 });
 
@@ -35,9 +35,11 @@ export async function POST(request: Request) {
 
     const { name, phone, password, counterName, role, eventId } = parsed.data;
     const isOrganizer = auth.role === "ORGANIZER";
-    const targetEventId = isOrganizer ? auth.eventId : eventId;
+    const isSuperOrganizer = auth.role === "SUPER_ORGANIZER";
+    const isEventScoped = isOrganizer || isSuperOrganizer;
+    const targetEventId = isEventScoped ? auth.eventId : eventId;
 
-    if (isOrganizer && !auth.eventId) {
+    if (isEventScoped && !auth.eventId) {
       return NextResponse.json(
         { error: "Organizer is not assigned to an event" },
         { status: 403 }
@@ -50,6 +52,24 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "Organizers can only create volunteer accounts" },
         { status: 403 }
+      );
+    }
+    if (isSuperOrganizer && role !== "VOLUNTEER" && role !== "ORGANIZER") {
+      return NextResponse.json(
+        { error: "Super Organizers can only create volunteer and organizer accounts" },
+        { status: 403 }
+      );
+    }
+    if (role === "SUPER_ORGANIZER" && auth.role !== "ADMIN") {
+      return NextResponse.json(
+        { error: "Only Admin can create Super Organizer accounts" },
+        { status: 403 }
+      );
+    }
+    if (role === "SUPER_ORGANIZER" && !eventId) {
+      return NextResponse.json(
+        { error: "Event is required for Super Organizer" },
+        { status: 400 }
       );
     }
     const normalizedPhone = phone.trim();
@@ -105,7 +125,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         success: true,
-        message: `${finalRole === "ORGANIZER" ? "Organizer" : "Volunteer"} created successfully`,
+        message: `${finalRole === "SUPER_ORGANIZER" ? "Super Organizer" : finalRole === "ORGANIZER" ? "Organizer" : "Volunteer"} created successfully`,
       },
       { status: 201 }
     );

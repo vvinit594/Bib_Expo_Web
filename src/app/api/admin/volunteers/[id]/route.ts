@@ -31,12 +31,16 @@ export async function DELETE(
     }
 
     const isOrganizer = auth.role === "ORGANIZER";
-    if (isOrganizer) {
+    const isSuperOrganizer = auth.role === "SUPER_ORGANIZER";
+    if (isOrganizer || isSuperOrganizer) {
       if (!auth.eventId) {
         return NextResponse.json({ error: "Organizer is not assigned to an event" }, { status: 403 });
       }
-      if (volunteer.role !== "VOLUNTEER") {
+      if (isOrganizer && volunteer.role !== "VOLUNTEER") {
         return NextResponse.json({ error: "Organizers can delete volunteer accounts only" }, { status: 403 });
+      }
+      if (isSuperOrganizer && volunteer.role !== "VOLUNTEER" && volunteer.role !== "ORGANIZER") {
+        return NextResponse.json({ error: "Super Organizers can delete volunteer and organizer accounts only" }, { status: 403 });
       }
       if (volunteer.eventId !== auth.eventId) {
         return NextResponse.json({ error: "You can only manage volunteers from your event" }, { status: 403 });

@@ -23,6 +23,7 @@ export default function AdminExportPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const isAdmin = userRole === "ADMIN";
+  const isSuperOrganizer = userRole === "SUPER_ORGANIZER";
 
   React.useEffect(() => {
     fetch("/api/auth/me")
@@ -39,15 +40,17 @@ export default function AdminExportPage() {
               setActiveEventId(data?.activeEventId ?? list[0]?.id ?? null);
             });
         }
-        return fetch("/api/event/current")
-          .then((r) => (r.ok ? r.json() : null))
-          .then((eventData) => {
-            if (eventData?.event) {
-              const ev = eventData.event;
-              setEvents([{ id: ev.id, name: ev.name, eventDate: ev.eventDate, createdAt: ev.eventDate ?? new Date().toISOString() }]);
-              setActiveEventId(ev.id);
-            }
-          });
+        if (role === "ORGANIZER" || role === "SUPER_ORGANIZER") {
+          return fetch("/api/event/current")
+            .then((r) => (r.ok ? r.json() : null))
+            .then((eventData) => {
+              if (eventData?.event) {
+                const ev = eventData.event;
+                setEvents([{ id: ev.id, name: ev.name, eventDate: ev.eventDate, createdAt: ev.eventDate ?? new Date().toISOString() }]);
+                setActiveEventId(ev.id);
+              }
+            });
+        }
       })
       .catch(() => {
         setEvents([]);
@@ -126,6 +129,22 @@ export default function AdminExportPage() {
               >
                 Event Setup
               </Link>
+            )}
+            {isSuperOrganizer && (
+              <>
+                <Link
+                  href="/admin#organizers"
+                  className="text-xs font-medium text-slate-600 hover:text-slate-900"
+                >
+                  Manage Organizers
+                </Link>
+                <Link
+                  href="/admin#volunteers"
+                  className="text-xs font-medium text-slate-600 hover:text-slate-900"
+                >
+                  Manage Volunteers
+                </Link>
+              </>
             )}
           </div>
         </div>

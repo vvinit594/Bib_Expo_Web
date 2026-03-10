@@ -15,10 +15,14 @@ export async function GET() {
 
   try {
     const isOrganizer = auth.role === "ORGANIZER";
+    const isSuperOrganizer = auth.role === "SUPER_ORGANIZER";
+    const where = isOrganizer
+      ? { role: "VOLUNTEER" as const, eventId: auth.eventId ?? "__none__" }
+      : isSuperOrganizer
+        ? { role: { in: ["VOLUNTEER", "ORGANIZER"] as const }, eventId: auth.eventId ?? "__none__" }
+        : { role: { in: ["VOLUNTEER", "ORGANIZER", "SUPER_ORGANIZER"] as const } };
     const volunteers = await prisma.volunteer.findMany({
-      where: isOrganizer
-        ? { role: "VOLUNTEER", eventId: auth.eventId ?? "__none__" }
-        : { role: { in: ["VOLUNTEER", "ORGANIZER"] } },
+      where,
       orderBy: { createdAt: "desc" },
       select: {
         id: true,

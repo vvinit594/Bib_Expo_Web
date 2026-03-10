@@ -38,16 +38,23 @@ export async function POST(
     }
 
     const isOrganizer = auth.role === "ORGANIZER";
-    if (isOrganizer) {
+    const isSuperOrganizer = auth.role === "SUPER_ORGANIZER";
+    if (isOrganizer || isSuperOrganizer) {
       if (!auth.eventId) {
         return NextResponse.json(
           { error: "Organizer is not assigned to an event" },
           { status: 403 }
         );
       }
-      if (volunteer.role !== "VOLUNTEER") {
+      if (isOrganizer && volunteer.role !== "VOLUNTEER") {
         return NextResponse.json(
           { error: "Organizers can reset volunteer passwords only" },
+          { status: 403 }
+        );
+      }
+      if (isSuperOrganizer && volunteer.role !== "VOLUNTEER" && volunteer.role !== "ORGANIZER") {
+        return NextResponse.json(
+          { error: "Super Organizers can reset volunteer and organizer passwords only" },
           { status: 403 }
         );
       }

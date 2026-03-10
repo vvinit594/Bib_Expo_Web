@@ -75,8 +75,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Organizer login only
-    if (volunteer.role !== "ORGANIZER") {
+    // Organizer or Super Organizer login only
+    if (volunteer.role !== "ORGANIZER" && volunteer.role !== "SUPER_ORGANIZER") {
       return NextResponse.json(
         { error: "Use the appropriate login page for your role." },
         { status: 403 }

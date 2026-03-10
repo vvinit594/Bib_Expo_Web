@@ -10,7 +10,7 @@ type Volunteer = {
   id: string;
   name: string;
   phone: string;
-  role: "VOLUNTEER" | "ORGANIZER";
+  role: "VOLUNTEER" | "ORGANIZER" | "SUPER_ORGANIZER";
   eventId: string | null;
   eventName: string;
   counterName: string;
@@ -23,24 +23,24 @@ type EventItem = {
 };
 
 type AuthMeUser = {
-  role: "ADMIN" | "ORGANIZER" | "VOLUNTEER";
+  role: "ADMIN" | "ORGANIZER" | "SUPER_ORGANIZER" | "VOLUNTEER";
   eventId: string | null;
 };
 
 export default function AdminPage() {
   const router = useRouter();
-  const [roleName, setRoleName] = React.useState<"ADMIN" | "ORGANIZER">("ADMIN");
+  const [roleName, setRoleName] = React.useState<"ADMIN" | "ORGANIZER" | "SUPER_ORGANIZER">("ADMIN");
   const [name, setName] = React.useState("");
   const [phone, setPhone] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [showPassword, setShowPassword] = React.useState(false);
   const [counterName, setCounterName] = React.useState("");
-  const [accountMode, setAccountMode] = React.useState<"VOLUNTEER" | "ORGANIZER">("VOLUNTEER");
+  const [accountMode, setAccountMode] = React.useState<"VOLUNTEER" | "ORGANIZER" | "SUPER_ORGANIZER">("VOLUNTEER");
   const [activeEventId, setActiveEventId] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [showSuccessPopup, setShowSuccessPopup] = React.useState(false);
-  const [createdAccountType, setCreatedAccountType] = React.useState<"VOLUNTEER" | "ORGANIZER">("VOLUNTEER");
+  const [createdAccountType, setCreatedAccountType] = React.useState<"VOLUNTEER" | "ORGANIZER" | "SUPER_ORGANIZER">("VOLUNTEER");
   const [volunteers, setVolunteers] = React.useState<Volunteer[]>([]);
   const [volunteersLoading, setVolunteersLoading] = React.useState(true);
   const [deleteConfirmFor, setDeleteConfirmFor] = React.useState<Volunteer | null>(null);
@@ -61,11 +61,17 @@ export default function AdminPage() {
     () => volunteers.filter((v) => v.role === "ORGANIZER"),
     [volunteers]
   );
+  const superOrganizerUsers = React.useMemo(
+    () => volunteers.filter((v) => v.role === "SUPER_ORGANIZER"),
+    [volunteers]
+  );
   const isAdmin = roleName === "ADMIN";
   const isOrganizer = roleName === "ORGANIZER";
+  const isSuperOrganizer = roleName === "SUPER_ORGANIZER";
   const hasActiveEvent = !!activeEventId;
-  const effectiveRole: "VOLUNTEER" | "ORGANIZER" = isOrganizer ? "VOLUNTEER" : accountMode;
+  const effectiveRole: "VOLUNTEER" | "ORGANIZER" | "SUPER_ORGANIZER" = isOrganizer ? "VOLUNTEER" : accountMode;
   const showOrganizerForm = effectiveRole === "ORGANIZER";
+  const showSuperOrganizerForm = effectiveRole === "SUPER_ORGANIZER";
 
   const fetchEvents = React.useCallback(() => {
     if (!isAdmin) return;
@@ -96,14 +102,14 @@ export default function AdminPage() {
       .then((data) => {
         const user = (data?.user ?? null) as AuthMeUser | null;
         if (!user) return;
-        if (user.role === "ADMIN" || user.role === "ORGANIZER") {
+        if (user.role === "ADMIN" || user.role === "ORGANIZER" || user.role === "SUPER_ORGANIZER") {
           setRoleName(user.role);
         } else {
           router.push("/dashboard");
         }
-        if (user.role === "ORGANIZER") {
+        if (user.role === "ORGANIZER" || user.role === "SUPER_ORGANIZER") {
           setActiveEventId(user.eventId ?? "");
-          setAccountMode("VOLUNTEER");
+          setAccountMode(user.role === "ORGANIZER" ? "VOLUNTEER" : "ORGANIZER");
         }
       })
       .catch(() => {});
@@ -138,7 +144,7 @@ export default function AdminPage() {
           name: name.trim(),
           phone: phone.trim(),
           password: password,
-          counterName: showOrganizerForm ? undefined : counterName.trim(),
+          counterName: showOrganizerForm || showSuperOrganizerForm ? undefined : counterName.trim(),
           role: effectiveRole,
           eventId: activeEventId,
         }),
@@ -159,6 +165,7 @@ export default function AdminPage() {
       setShowPassword(false);
       setCounterName("");
       if (isAdmin) setAccountMode("VOLUNTEER");
+      if (isSuperOrganizer) setAccountMode("ORGANIZER");
       fetchVolunteers();
       setTimeout(() => setShowSuccessPopup(false), 2000);
     } catch {
@@ -234,7 +241,9 @@ export default function AdminPage() {
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-semibold">Bib Expo</span>
-              <span className="text-[0.7rem] text-slate-500">{isOrganizer ? "Organizer Panel" : "Admin Panel"}</span>
+              <span className="text-[0.7rem] text-slate-500">
+                {isOrganizer ? "Organizer Panel" : isSuperOrganizer ? "Super Organizer Panel" : "Admin Panel"}
+              </span>
             </div>
           </Link>
           <div className="flex items-center gap-3">
@@ -260,9 +269,11 @@ export default function AdminPage() {
       </ScrollAwareHeader>
 
       <main className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
-        {!hasActiveEvent && (
+        {!hasActiveEvent && (isAdmin || isSuperOrganizer) && (
           <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            No active event selected. Please choose an event from Event Setup before creating users.
+            {isAdmin
+              ? "No active event selected. Please choose an event from Event Setup before creating users."
+              : "No event assigned."}
           </div>
         )}
 
@@ -270,15 +281,21 @@ export default function AdminPage() {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h1 className="text-lg font-semibold">
-                {showOrganizerForm ? "Create Organizer Account" : "Create Volunteer Account"}
+                {showSuperOrganizerForm
+                  ? "Create Super Organizer Account"
+                  : showOrganizerForm
+                    ? "Create Organizer Account"
+                    : "Create Volunteer Account"}
               </h1>
               <p className="mt-1 text-sm text-slate-500">
-                {showOrganizerForm
-                  ? "Add a new organizer for this event."
-                  : "Add a new volunteer. Set their credentials for first login."}
+                {showSuperOrganizerForm
+                  ? "Only Admin can create Super Organizers."
+                  : showOrganizerForm
+                    ? "Add a new organizer for this event."
+                    : "Set their credentials for first login."}
               </p>
             </div>
-            {isAdmin ? (
+            {(isAdmin || isSuperOrganizer) ? (
               <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
                 <button
                   type="button"
@@ -302,6 +319,19 @@ export default function AdminPage() {
                 >
                   Organizer
                 </button>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => setAccountMode("SUPER_ORGANIZER")}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                      accountMode === "SUPER_ORGANIZER"
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    Super Organizer
+                  </button>
+                )}
               </div>
             ) : (
               <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-[0.7rem] font-medium text-slate-600">
@@ -319,7 +349,13 @@ export default function AdminPage() {
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder={showOrganizerForm ? "Organizer full name" : "Volunteer full name"}
+                placeholder={
+                  showSuperOrganizerForm
+                    ? "Super Organizer full name"
+                    : showOrganizerForm
+                      ? "Organizer full name"
+                      : "Volunteer full name"
+                }
                 className="mt-1 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-200"
                 required
                 disabled={!hasActiveEvent}
@@ -379,7 +415,7 @@ export default function AdminPage() {
                 </button>
               </div>
             </div>
-            {!showOrganizerForm && (
+            {!showOrganizerForm && !showSuperOrganizerForm && (
             <div>
               <label htmlFor="counterName" className="block text-sm font-medium text-slate-700">
                 Counter No./Name
@@ -405,13 +441,15 @@ export default function AdminPage() {
               disabled={loading || !activeEventId}
               className="h-11 w-full rounded-xl bg-[#E11D48] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#BE123C] disabled:opacity-60"
             >
-              {loading ? "Creating..." : `Create ${showOrganizerForm ? "Organizer" : "Volunteer"}`}
+              {loading
+                ? "Creating..."
+                : `Create ${showSuperOrganizerForm ? "Super Organizer" : showOrganizerForm ? "Organizer" : "Volunteer"}`}
             </button>
           </form>
         </div>
 
         {/* Volunteers section */}
-        <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div id="volunteers" className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-base font-semibold text-slate-900">Manage Volunteers</h2>
           <p className="mt-0.5 text-sm text-slate-500">
             Event-scoped volunteer accounts. Deleting removes access immediately.
@@ -531,8 +569,8 @@ export default function AdminPage() {
         </div>
 
         {/* Organizers section */}
-        {isAdmin && (
-        <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        {(isAdmin || isSuperOrganizer) && (
+        <div id="organizers" className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-base font-semibold text-slate-900">Manage Organizers</h2>
           <p className="mt-0.5 text-sm text-slate-500">
             Organizer accounts are event-limited and cannot access global admin controls.
@@ -645,11 +683,124 @@ export default function AdminPage() {
         </div>
         )}
 
+        {/* Super Organizers section - Admin only */}
+        {isAdmin && (
+        <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-base font-semibold text-slate-900">Manage Super Organizers</h2>
+          <p className="mt-0.5 text-sm text-slate-500">
+            Super Organizers can manage organizers and volunteers for one assigned event only.
+          </p>
+
+          {volunteersLoading ? (
+            <p className="mt-6 text-sm text-slate-500">Loading super organizers...</p>
+          ) : superOrganizerUsers.length === 0 ? (
+            <p className="mt-6 text-sm text-slate-500">No super organizers yet. Create one above.</p>
+          ) : (
+            <>
+              <div className="mt-6 hidden overflow-x-auto md:block">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-slate-600">
+                      <th className="pb-3 pr-4 font-medium">Username</th>
+                      <th className="pb-3 pr-4 font-medium">Phone Number</th>
+                      <th className="pb-3 pr-4 font-medium">Event</th>
+                      <th className="pb-3 pr-4 font-medium">Created</th>
+                      <th className="pb-3 pr-4 font-medium">Status</th>
+                      <th className="pb-3 pr-4 font-medium">Reset Password</th>
+                      <th className="pb-3 font-medium"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {superOrganizerUsers.map((v) => (
+                      <tr key={v.id} className="border-b border-slate-100">
+                        <td className="py-3 pr-4 font-medium text-slate-900">{v.name}</td>
+                        <td className="py-3 pr-4 text-slate-600">{v.phone}</td>
+                        <td className="py-3 pr-4 text-slate-600">{v.eventName}</td>
+                        <td className="py-3 pr-4 text-slate-500">
+                          {new Date(v.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="py-3 pr-4">
+                          <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+                            {v.status}
+                          </span>
+                        </td>
+                        <td className="py-3 pr-4">
+                          <button
+                            type="button"
+                            onClick={() => handleResetPasswordClick(v)}
+                            disabled={resetting}
+                            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                          >
+                            Reset Password
+                          </button>
+                        </td>
+                        <td className="py-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setError(null);
+                              setDeleteConfirmFor(v);
+                            }}
+                            className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-100"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mt-6 space-y-3 md:hidden">
+                {superOrganizerUsers.map((v) => (
+                  <div key={v.id} className="rounded-xl border border-slate-200 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-slate-900">{v.name}</p>
+                        <p className="mt-0.5 text-xs text-slate-600">{v.phone}</p>
+                        <p className="mt-1 text-xs text-slate-500">Super Organizer · {v.eventName}</p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {new Date(v.createdAt).toLocaleDateString()}
+                        </p>
+                        <span className="mt-2 inline-flex rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+                          {v.status}
+                        </span>
+                      </div>
+                      <div className="flex shrink-0 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleResetPasswordClick(v)}
+                          disabled={resetting}
+                          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                        >
+                          Reset Password
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setError(null);
+                            setDeleteConfirmFor(v);
+                          }}
+                          className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-100"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+        )}
+
         {showSuccessPopup && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
               <p className="text-center font-semibold text-emerald-700">
-                {createdAccountType === "ORGANIZER" ? "Organizer" : "Volunteer"} Account Created Successfully ✅
+                {createdAccountType === "SUPER_ORGANIZER" ? "Super Organizer" : createdAccountType === "ORGANIZER" ? "Organizer" : "Volunteer"} Account Created Successfully ✅
               </p>
               <p className="mt-1 text-center text-sm text-slate-500">
                 The volunteer list has been updated.

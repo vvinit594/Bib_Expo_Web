@@ -120,6 +120,7 @@ export default function DashboardPage() {
   const [statsDrawerOpen, setStatsDrawerOpen] = React.useState(false);
 
   const isAdmin = user?.role === "ADMIN";
+  const isSuperOrganizer = user?.role === "SUPER_ORGANIZER";
   const activeEventName = React.useMemo(
     () => events.find((ev) => ev.id === activeEventId)?.name ?? "Switch Event",
     [events, activeEventId]
@@ -471,7 +472,7 @@ export default function DashboardPage() {
             <div className="flex min-w-0 flex-col">
               <span className="text-sm font-semibold">Bib Expo</span>
               <span className="text-[0.7rem] text-slate-500">
-                {isAdmin ? "Admin Dashboard" : user?.role === "ORGANIZER" ? "Organizer Dashboard" : "Volunteer Dashboard"}
+                {isAdmin ? "Admin Dashboard" : isSuperOrganizer ? "Super Organizer Dashboard" : user?.role === "ORGANIZER" ? "Organizer Dashboard" : "Volunteer Dashboard"}
               </span>
             </div>
           </div>
@@ -589,10 +590,18 @@ export default function DashboardPage() {
                 </Link>
               </>
             )}
-            {user?.role === "ORGANIZER" && (
+            {(user?.role === "ORGANIZER" || isSuperOrganizer) && (
               <>
+                {isSuperOrganizer && (
+                  <Link
+                    href="/admin#organizers"
+                    className="hidden h-9 min-h-9 shrink-0 items-center rounded-full border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 md:inline-flex whitespace-nowrap"
+                  >
+                    Manage Organizers
+                  </Link>
+                )}
                 <Link
-                  href="/admin"
+                  href={isSuperOrganizer ? "/admin#volunteers" : "/admin"}
                   className="hidden h-9 min-h-9 shrink-0 items-center rounded-full border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 md:inline-flex whitespace-nowrap"
                 >
                   Manage Volunteers
@@ -608,7 +617,7 @@ export default function DashboardPage() {
             <div className="hidden shrink-0 items-center gap-2 text-xs md:flex">
               <div className="flex flex-col items-end justify-center">
                 <span className="text-[0.7rem] text-slate-500">
-                  {isAdmin ? "Admin" : user?.role === "ORGANIZER" ? "Organizer" : "Volunteer"}: {user?.name ?? "—"}
+                  {isAdmin ? "Admin" : isSuperOrganizer ? "Super Organizer" : user?.role === "ORGANIZER" ? "Organizer" : "Volunteer"}: {user?.name ?? "—"}
                 </span>
               </div>
               <span className="grid size-8 shrink-0 place-items-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700">
@@ -743,7 +752,7 @@ export default function DashboardPage() {
                         </div>
                       )}
                       <p className="text-[0.7rem] text-slate-500">
-                        {isAdmin ? "Admin" : user?.role === "ORGANIZER" ? "Organizer" : "Volunteer"}: {user?.name ?? "—"}
+                        {isAdmin ? "Admin" : isSuperOrganizer ? "Super Organizer" : user?.role === "ORGANIZER" ? "Organizer" : "Volunteer"}: {user?.name ?? "—"}
                       </p>
                     </div>
                     {isAdmin && (
@@ -776,11 +785,20 @@ export default function DashboardPage() {
                         </div>
                       </div>
                     )}
-                    {user?.role === "ORGANIZER" && (
+                    {(user?.role === "ORGANIZER" || isSuperOrganizer) && (
                       <div className="border-b border-slate-100 px-2 py-2">
                         <div className="mt-1 flex flex-col gap-1">
+                          {isSuperOrganizer && (
+                            <Link
+                              href="/admin#organizers"
+                              onClick={() => setMobileMenuOpen(false)}
+                              className="flex h-11 items-center rounded-lg px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                            >
+                              Manage Organizers
+                            </Link>
+                          )}
                           <Link
-                            href="/admin"
+                            href={isSuperOrganizer ? "/admin#volunteers" : "/admin"}
                             onClick={() => setMobileMenuOpen(false)}
                             className="flex h-11 items-center rounded-lg px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                           >
