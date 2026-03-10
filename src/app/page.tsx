@@ -72,13 +72,18 @@ export default function Home() {
               <p className="mb-[10px] text-[14px] font-semibold tracking-[0.5px] text-slate-100 opacity-90">
                 Powered by Fitskol
               </p>
-              <div className="mt-5 flex h-[120px] w-[260px] shrink-0 items-center justify-center">
+              <a
+                href="https://www.fitskol.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-5 flex h-[120px] w-[260px] shrink-0 cursor-pointer items-center justify-center"
+              >
                 <img
                   src="/brand_logo.jpeg"
                   alt="Fitskol"
                   className="max-h-full max-w-full object-contain transition-transform duration-200 ease-in-out hover:scale-105"
                 />
-              </div>
+              </a>
             </div>
 
             {/* Vertical divider - hidden on mobile */}
@@ -89,13 +94,18 @@ export default function Home() {
               <p className="mb-[10px] text-[14px] font-semibold tracking-[0.5px] text-slate-100 opacity-90">
                 Supported by BookMyRun
               </p>
-              <div className="mt-5 flex h-[120px] w-[260px] shrink-0 items-center justify-center">
+              <a
+                href="https://bookmyrun.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-5 flex h-[120px] w-[260px] shrink-0 cursor-pointer items-center justify-center"
+              >
                 <img
                   src="/bookmyrunlogo.jpeg"
                   alt="BookMyRun"
                   className="max-h-full max-w-full object-contain transition-transform duration-200 ease-in-out hover:scale-105"
                 />
-              </div>
+              </a>
             </div>
           </div>
         </footer>
