@@ -15,20 +15,39 @@ type EventInfo = {
 
 export default function AdminExportPage() {
   const router = useRouter();
+  const [userRole, setUserRole] = React.useState<string | null>(null);
   const [events, setEvents] = React.useState<EventInfo[]>([]);
   const [activeEventId, setActiveEventId] = React.useState<string | null>(null);
   const [exporting, setExporting] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const isAdmin = userRole === "ADMIN";
 
   React.useEffect(() => {
-    fetch("/api/admin/events")
+    fetch("/api/auth/me")
       .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        const list = Array.isArray(data?.events) ? data.events : [];
-        setEvents(list);
-        setActiveEventId(data?.activeEventId ?? list[0]?.id ?? null);
+      .then((authData) => {
+        const role = authData?.user?.role;
+        setUserRole(role ?? null);
+        if (role === "ADMIN") {
+          return fetch("/api/admin/events")
+            .then((r) => (r.ok ? r.json() : null))
+            .then((data) => {
+              const list = Array.isArray(data?.events) ? data.events : [];
+              setEvents(list);
+              setActiveEventId(data?.activeEventId ?? list[0]?.id ?? null);
+            });
+        }
+        return fetch("/api/event/current")
+          .then((r) => (r.ok ? r.json() : null))
+          .then((eventData) => {
+            if (eventData?.event) {
+              const ev = eventData.event;
+              setEvents([{ id: ev.id, name: ev.name, eventDate: ev.eventDate, createdAt: ev.eventDate ?? new Date().toISOString() }]);
+              setActiveEventId(ev.id);
+            }
+          });
       })
       .catch(() => {
         setEvents([]);
@@ -100,12 +119,14 @@ export default function AdminExportPage() {
             >
               Dashboard
             </Link>
-            <Link
-              href="/admin/events"
-              className="text-xs font-medium text-slate-600 hover:text-slate-900"
-            >
-              Event Setup
-            </Link>
+            {isAdmin && (
+              <Link
+                href="/admin/events"
+                className="text-xs font-medium text-slate-600 hover:text-slate-900"
+              >
+                Event Setup
+              </Link>
+            )}
           </div>
         </div>
       </ScrollAwareHeader>
@@ -168,14 +189,16 @@ export default function AdminExportPage() {
             >
               Advance Export <span className="ml-1.5 text-xs">(Coming soon)</span>
             </button>
-            <button
-              type="button"
-              onClick={() => setShowDeleteConfirm(true)}
-              disabled={!activeEventId || deleting}
-              className="inline-flex items-center justify-center rounded-full border border-amber-200 bg-amber-50 px-5 py-2.5 text-sm font-semibold text-amber-800 shadow-sm transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {deleting ? "Deleting…" : "Delete Event Data"}
-            </button>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={!activeEventId || deleting}
+                className="inline-flex items-center justify-center rounded-full border border-amber-200 bg-amber-50 px-5 py-2.5 text-sm font-semibold text-amber-800 shadow-sm transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {deleting ? "Deleting…" : "Delete Event Data"}
+              </button>
+            )}
           </div>
         </div>
       </main>

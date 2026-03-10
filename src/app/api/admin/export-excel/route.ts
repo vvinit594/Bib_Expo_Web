@@ -3,12 +3,13 @@ import { cookies } from "next/headers";
 import * as XLSX from "xlsx";
 
 import { prisma } from "@/lib/db";
-import { requireAdmin } from "@/lib/auth-server";
+import { requireOrganizerOrAdmin } from "@/lib/auth-server";
 import { ACTIVE_EVENT_COOKIE_NAME } from "@/lib/auth";
 
 export async function GET() {
+  let auth;
   try {
-    await requireAdmin();
+    auth = await requireOrganizerOrAdmin();
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unauthorized";
     const status = msg === "Forbidden" ? 403 : 401;
@@ -16,8 +17,13 @@ export async function GET() {
   }
 
   try {
-    const cookieStore = await cookies();
-    const activeEventId = cookieStore.get(ACTIVE_EVENT_COOKIE_NAME)?.value ?? null;
+    let activeEventId: string | null;
+    if (auth.role === "ORGANIZER") {
+      activeEventId = auth.eventId;
+    } else {
+      const cookieStore = await cookies();
+      activeEventId = cookieStore.get(ACTIVE_EVENT_COOKIE_NAME)?.value ?? null;
+    }
     if (!activeEventId) {
       return NextResponse.json(
         { error: "Select an active event before exporting" },

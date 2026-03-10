@@ -590,18 +590,23 @@ export default function DashboardPage() {
               </>
             )}
             {user?.role === "ORGANIZER" && (
-              <Link
-                href="/admin"
-                className="hidden h-9 min-h-9 shrink-0 items-center rounded-full border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 md:inline-flex whitespace-nowrap"
-              >
-                Manage Volunteers
-              </Link>
+              <>
+                <Link
+                  href="/admin"
+                  className="hidden h-9 min-h-9 shrink-0 items-center rounded-full border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 md:inline-flex whitespace-nowrap"
+                >
+                  Manage Volunteers
+                </Link>
+                <Link
+                  href="/admin/export"
+                  className="hidden h-9 min-h-9 shrink-0 items-center rounded-full border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 md:inline-flex whitespace-nowrap"
+                >
+                  Export Excel
+                </Link>
+              </>
             )}
             <div className="hidden shrink-0 items-center gap-2 text-xs md:flex">
               <div className="flex flex-col items-end justify-center">
-                <span className="font-medium text-slate-900">
-                  {user?.counterName ?? "Counter 4 – 10K"}
-                </span>
                 <span className="text-[0.7rem] text-slate-500">
                   {isAdmin ? "Admin" : user?.role === "ORGANIZER" ? "Organizer" : "Volunteer"}: {user?.name ?? "—"}
                 </span>
@@ -738,9 +743,6 @@ export default function DashboardPage() {
                         </div>
                       )}
                       <p className="text-[0.7rem] text-slate-500">
-                        {user?.counterName ?? "Counter 4 – 10K"}
-                      </p>
-                      <p className="text-[0.7rem] text-slate-500">
                         {isAdmin ? "Admin" : user?.role === "ORGANIZER" ? "Organizer" : "Volunteer"}: {user?.name ?? "—"}
                       </p>
                     </div>
@@ -783,6 +785,13 @@ export default function DashboardPage() {
                             className="flex h-11 items-center rounded-lg px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                           >
                             Manage Volunteers
+                          </Link>
+                          <Link
+                            href="/admin/export"
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="flex h-11 items-center rounded-lg px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                          >
+                            Export Excel
                           </Link>
                         </div>
                       </div>
