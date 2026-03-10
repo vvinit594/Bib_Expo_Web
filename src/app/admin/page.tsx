@@ -45,6 +45,13 @@ export default function AdminPage() {
   const [volunteersLoading, setVolunteersLoading] = React.useState(true);
   const [deleteConfirmFor, setDeleteConfirmFor] = React.useState<Volunteer | null>(null);
   const [deleting, setDeleting] = React.useState(false);
+  const [resetPasswordFor, setResetPasswordFor] = React.useState<Volunteer | null>(null);
+  const [resetPasswordResult, setResetPasswordResult] = React.useState<{
+    newPassword: string;
+  } | null>(null);
+  const [resetting, setResetting] = React.useState(false);
+  const [resetSuccess, setResetSuccess] = React.useState(false);
+  const [copyFeedback, setCopyFeedback] = React.useState(false);
 
   const volunteerUsers = React.useMemo(
     () => volunteers.filter((v) => v.role === "VOLUNTEER"),
@@ -159,6 +166,41 @@ export default function AdminPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleResetPasswordClick(v: Volunteer) {
+    setResetting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/volunteers/${v.id}/reset-password`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setResetPasswordFor(v);
+        setResetPasswordResult({ newPassword: data.newPassword });
+      } else {
+        setError(data.error ?? "Failed to reset password");
+      }
+    } catch {
+      setError("Failed to reset password.");
+    } finally {
+      setResetting(false);
+    }
+  }
+
+  function handleCopyPassword() {
+    if (resetPasswordResult?.newPassword) {
+      void navigator.clipboard.writeText(resetPasswordResult.newPassword);
+      setCopyFeedback(true);
+      setTimeout(() => setCopyFeedback(false), 2000);
+    }
+  }
+
+  function handleConfirmResetClose() {
+    setResetPasswordFor(null);
+    setResetPasswordResult(null);
+    setResetSuccess(false);
   }
 
   async function handleDeleteConfirm() {
@@ -392,6 +434,7 @@ export default function AdminPage() {
                       <th className="pb-3 pr-4 font-medium">Counter No./Name</th>
                       <th className="pb-3 pr-4 font-medium">Created</th>
                       <th className="pb-3 pr-4 font-medium">Status</th>
+                      <th className="pb-3 pr-4 font-medium">Reset Password</th>
                       <th className="pb-3 font-medium"></th>
                     </tr>
                   </thead>
@@ -409,6 +452,16 @@ export default function AdminPage() {
                           <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
                             {v.status}
                           </span>
+                        </td>
+                        <td className="py-3 pr-4">
+                          <button
+                            type="button"
+                            onClick={() => handleResetPasswordClick(v)}
+                            disabled={resetting}
+                            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                          >
+                            Reset Password
+                          </button>
                         </td>
                         <td className="py-3">
                           <button
@@ -449,16 +502,26 @@ export default function AdminPage() {
                           {v.status}
                         </span>
                       </div>
+                      <div className="flex shrink-0 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleResetPasswordClick(v)}
+                          disabled={resetting}
+                          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                        >
+                          Reset Password
+                        </button>
                         <button
                           type="button"
                           onClick={() => {
                             setError(null);
                             setDeleteConfirmFor(v);
                           }}
-                        className="shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-100"
-                      >
-                        Delete
-                      </button>
+                          className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-100"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -491,6 +554,7 @@ export default function AdminPage() {
                       <th className="pb-3 pr-4 font-medium">Counter No./Name</th>
                       <th className="pb-3 pr-4 font-medium">Created</th>
                       <th className="pb-3 pr-4 font-medium">Status</th>
+                      <th className="pb-3 pr-4 font-medium">Reset Password</th>
                       <th className="pb-3 font-medium"></th>
                     </tr>
                   </thead>
@@ -508,6 +572,16 @@ export default function AdminPage() {
                           <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
                             {v.status}
                           </span>
+                        </td>
+                        <td className="py-3 pr-4">
+                          <button
+                            type="button"
+                            onClick={() => handleResetPasswordClick(v)}
+                            disabled={resetting}
+                            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                          >
+                            Reset Password
+                          </button>
                         </td>
                         <td className="py-3">
                           <button
@@ -542,16 +616,26 @@ export default function AdminPage() {
                           {v.status}
                         </span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setError(null);
-                          setDeleteConfirmFor(v);
-                        }}
-                        className="shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-100"
-                      >
-                        Delete
-                      </button>
+                      <div className="flex shrink-0 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleResetPasswordClick(v)}
+                          disabled={resetting}
+                          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                        >
+                          Reset Password
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setError(null);
+                            setDeleteConfirmFor(v);
+                          }}
+                          className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-100"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -570,6 +654,63 @@ export default function AdminPage() {
               <p className="mt-1 text-center text-sm text-slate-500">
                 The volunteer list has been updated.
               </p>
+            </div>
+          </div>
+        )}
+
+        {/* Reset Password modal */}
+        {resetPasswordFor && resetPasswordResult && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+            <div className="relative w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
+              <button
+                type="button"
+                onClick={handleConfirmResetClose}
+                className="absolute right-4 top-4 rounded p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                aria-label="Close"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              <h3 className="text-lg font-semibold text-slate-900">Reset Password</h3>
+              <p className="mt-1 text-sm text-slate-600">
+                Username: {resetPasswordFor.name}
+              </p>
+              <p className="text-sm text-slate-600">
+                Phone: {resetPasswordFor.phone}
+              </p>
+              <div className="mt-4">
+                <label className="block text-xs font-medium text-slate-500">
+                  New Password
+                </label>
+                <p className="mt-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-sm font-medium text-slate-900">
+                  {resetPasswordResult.newPassword}
+                </p>
+              </div>
+              {resetSuccess && (
+                <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
+                  Password reset successfully.
+                </p>
+              )}
+              <div className="mt-6 flex gap-3">
+                <button
+                  type="button"
+                  onClick={handleCopyPassword}
+                  className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                >
+                  {copyFeedback ? "Password copied" : "Copy Password"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResetSuccess(true);
+                    setTimeout(() => handleConfirmResetClose(), 1500);
+                  }}
+                  className="flex-1 rounded-xl bg-[#E11D48] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#BE123C]"
+                >
+                  Confirm Reset
+                </button>
+              </div>
             </div>
           </div>
         )}
