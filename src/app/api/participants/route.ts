@@ -138,6 +138,7 @@ export async function GET(request: Request) {
         tshirtCollected: p.tshirtCollected,
         goodiesCollected: p.goodiesCollected,
         tshirtSizeCategory: extractTshirtSizeCategory(p.tShirtSize) ?? undefined,
+        issuedTshirtSize: p.issuedTshirtSize ?? undefined,
       };
     });
 

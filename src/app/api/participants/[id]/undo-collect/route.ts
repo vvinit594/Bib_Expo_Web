@@ -75,6 +75,7 @@ export async function POST(
           bibCollectedBy: null,
           tshirtCollectedBy: null,
           goodiesCollectedBy: null,
+          issuedTshirtSize: null,
           emailSent: false,
           emailSentAt: null,
         },

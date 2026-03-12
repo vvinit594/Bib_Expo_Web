@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { ScrollAwareHeader } from "@/components/ui/ScrollAwareHeader";
+import { TSHIRT_SIZES } from "@/lib/tshirt";
 
 type ParticipantStatus = "pending" | "partially-collected" | "collected" | "collected-by-behalf" | "on-spot";
 
@@ -32,6 +33,7 @@ type Participant = {
   tshirtCollected?: boolean;
   goodiesCollected?: boolean;
   tshirtSizeCategory?: string;
+  issuedTshirtSize?: string;
 };
 
 type AuthUser = {
@@ -66,10 +68,10 @@ export default function DashboardPage() {
   const [showBehalfModalFor, setShowBehalfModalFor] = React.useState<Participant | null>(null);
   const [showKitModalFor, setShowKitModalFor] = React.useState<Participant | null>(null);
   const [collectionFlow, setCollectionFlow] = React.useState<"mark" | "behalf" | "bulk" | null>("mark");
-  const [behalfKitForm, setBehalfKitForm] = React.useState({ bib: false, tshirt: false, goodies: false });
+  const [behalfKitForm, setBehalfKitForm] = React.useState({ bib: false, tshirt: false, goodies: false, tshirtSize: "" });
   const [showBulkKitModal, setShowBulkKitModal] = React.useState(false);
-  const [bulkKitForm, setBulkKitForm] = React.useState({ bib: false, tshirt: false, goodies: false });
-  const [kitForm, setKitForm] = React.useState({ bib: false, tshirt: false, goodies: false });
+  const [bulkKitForm, setBulkKitForm] = React.useState({ bib: false, tshirt: false, goodies: false, tshirtSize: "" });
+  const [kitForm, setKitForm] = React.useState({ bib: false, tshirt: false, goodies: false, tshirtSize: "" });
   const [showOnSpotModal, setShowOnSpotModal] = React.useState(false);
   const [collectingId, setCollectingId] = React.useState<string | null>(null);
   const [undoingId, setUndoingId] = React.useState<string | null>(null);
@@ -311,16 +313,19 @@ export default function DashboardPage() {
     if (kitForm.tshirt && !showKitModalFor.tshirtCollected) items.push("tshirt");
     if (kitForm.goodies && !showKitModalFor.goodiesCollected) items.push("goodies");
     if (items.length === 0) return;
+    const effectiveTshirtSize = kitForm.tshirtSize || showKitModalFor.tshirtSizeCategory || "M";
+    const issuedTshirtSize =
+      kitForm.tshirt && TSHIRT_SIZES.includes(effectiveTshirtSize) ? effectiveTshirtSize : undefined;
     setCollectingId(showKitModalFor.id);
     try {
       const res = await fetch(`/api/participants/${showKitModalFor.id}/collect`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "partial", items }),
+        body: JSON.stringify({ type: "partial", items, issuedTshirtSize }),
       });
       if (res.ok) {
         setShowKitModalFor(null);
-        setKitForm({ bib: false, tshirt: false, goodies: false });
+        setKitForm({ bib: false, tshirt: false, goodies: false, tshirtSize: "" });
         fetchParticipants();
         fetchActivities();
       }
@@ -337,6 +342,12 @@ export default function DashboardPage() {
   ) {
     if (collectingId) return;
     setCollectingId(p.id);
+    const issuedTshirtSize =
+      items?.includes("tshirt") &&
+      behalfKitForm.tshirtSize &&
+      TSHIRT_SIZES.includes(behalfKitForm.tshirtSize)
+        ? behalfKitForm.tshirtSize
+        : undefined;
     try {
       const body =
         type === "self"
@@ -347,6 +358,7 @@ export default function DashboardPage() {
               behalfContact: extra?.contact,
               behalfRelation: extra?.relation,
               ...(items && items.length > 0 && { items }),
+              ...(issuedTshirtSize && { issuedTshirtSize }),
             };
       const res = await fetch(`/api/participants/${p.id}/collect`, {
         method: "POST",
@@ -356,7 +368,7 @@ export default function DashboardPage() {
       if (res.ok) {
         setShowBehalfModalFor(null);
         setBehalfForm({ name: "", contact: "", relation: "" });
-        setBehalfKitForm({ bib: false, tshirt: false, goodies: false });
+        setBehalfKitForm({ bib: false, tshirt: false, goodies: false, tshirtSize: "" });
         setBehalfRelationOpen(false);
         fetchParticipants();
         fetchActivities();
@@ -399,7 +411,7 @@ export default function DashboardPage() {
         setSelectedTeam(null);
         setShowBulkModal(false);
         setBulkForm({ name: "", contact: "", relation: "", idProof: "" });
-        setBulkKitForm({ bib: false, tshirt: false, goodies: false });
+        setBulkKitForm({ bib: false, tshirt: false, goodies: false, tshirtSize: "" });
         setBulkRelationOpen(false);
         fetchParticipants();
         setTimeout(() => setBulkSuccessMessage(null), 5000);
@@ -874,8 +886,9 @@ export default function DashboardPage() {
               </div>
               <button
                 type="button"
+                disabled
                 onClick={() => setShowOnSpotModal(true)}
-                className="hidden items-center gap-1.5 rounded-full bg-slate-900 px-3 py-1.5 text-[0.7rem] font-semibold text-white shadow-sm transition hover:bg-slate-800 sm:inline-flex"
+                className="hidden cursor-not-allowed items-center gap-1.5 rounded-full bg-slate-400 px-3 py-1.5 text-[0.7rem] font-semibold text-white opacity-70 sm:inline-flex"
               >
                 <span>➕</span>
                 <span>New On-Spot Registration</span>
@@ -902,8 +915,9 @@ export default function DashboardPage() {
 
             <button
               type="button"
+              disabled
               onClick={() => setShowOnSpotModal(true)}
-              className="inline-flex h-11 items-center justify-center rounded-full bg-slate-900 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 sm:hidden"
+              className="inline-flex h-11 cursor-not-allowed items-center justify-center rounded-full bg-slate-400 px-4 text-sm font-semibold text-white opacity-70 sm:hidden"
             >
               ➕ New On-Spot Registration
             </button>
@@ -962,7 +976,7 @@ export default function DashboardPage() {
                   type="button"
                   onClick={() => {
                     setShowBulkKitModal(true);
-                    setBulkKitForm({ bib: false, tshirt: false, goodies: false });
+                    setBulkKitForm({ bib: false, tshirt: false, goodies: false, tshirtSize: "" });
                   }}
                   disabled={selectedCount === 0}
                   className="inline-flex h-9 items-center justify-center rounded-full bg-[#E11D48] px-4 text-[0.75rem] font-semibold text-white shadow-sm transition hover:bg-[#BE123C] disabled:opacity-50 disabled:pointer-events-none"
@@ -993,10 +1007,12 @@ export default function DashboardPage() {
               {filtered.map((p) => (
                 <article
                   key={p.id}
-                  className={`flex flex-col gap-3 rounded-2xl border px-3 py-3 text-sm shadow-sm sm:px-4 sm:py-4 ${
-                    selectedTeam && p.bulkTeam === selectedTeam
-                      ? "border-sky-400 bg-sky-50/50 ring-2 ring-sky-200"
-                      : "border-slate-200 bg-white"
+                  className={`flex flex-col gap-3 rounded-2xl border px-3 py-3 text-sm shadow-sm transition-all duration-300 ease-in-out sm:px-4 sm:py-4 ${
+                    isFullyCollected(p)
+                      ? "border-slate-200 border-l-4 border-l-emerald-500 bg-[rgba(34,197,94,0.08)] shadow-[0_0_12px_rgba(34,197,94,0.35)]"
+                      : selectedTeam && p.bulkTeam === selectedTeam
+                        ? "border-sky-400 bg-sky-50/50 ring-2 ring-sky-200"
+                        : "border-slate-200 bg-white"
                   }`}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1056,8 +1072,10 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  {/* Mobile summary: key contact info + toggle */}
+                  {/* Mobile summary: key info + toggle + action buttons */}
                   <div className="mt-2 space-y-1 text-[0.72rem] text-slate-600 sm:hidden">
+                    <p><span className="font-medium text-slate-700">Full Name:</span> {p.name}</p>
+                    <p><span className="font-medium text-slate-700">Bib No:</span> {p.bib}</p>
                     <p><span className="font-medium text-slate-700">Email ID:</span> {p.email || "—"}</p>
                     <p><span className="font-medium text-slate-700">Phone Number:</span> {p.phone || "—"}</p>
                     <button
@@ -1068,6 +1086,64 @@ export default function DashboardPage() {
                     >
                       {expandedParticipants[p.id] ? "Show Less ▲" : "Show More ▼"}
                     </button>
+                    <div className="flex flex-col gap-2 pt-2">
+                      {(p.status === "pending" || p.status === "on-spot" || p.status === "partially-collected") && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCollectionFlow("mark");
+                              setShowKitModalFor(p);
+                              setKitForm({ bib: false, tshirt: false, goodies: false, tshirtSize: p.tshirtSizeCategory || "M" });
+                            }}
+                            disabled={collectingId === p.id || (!!p.bibCollected && !!p.tshirtCollected && !!p.goodiesCollected)}
+                            className="inline-flex h-9 items-center justify-center rounded-full bg-[#E11D48] px-4 text-[0.75rem] font-semibold text-white shadow-sm transition hover:bg-[#BE123C] disabled:opacity-60"
+                          >
+                            {collectingId === p.id ? "..." : "Mark as Collected"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCollectionFlow("behalf");
+                              setShowKitModalFor(p);
+                              const initial = { bib: false, tshirt: false, goodies: false, tshirtSize: p.tshirtSizeCategory || "M" };
+                              setKitForm(initial);
+                              setBehalfKitForm(initial);
+                            }}
+                            disabled={!!collectingId || (!!p.bibCollected && !!p.tshirtCollected && !!p.goodiesCollected)}
+                            className="inline-flex h-9 items-center justify-center rounded-full border border-rose-200 bg-rose-50 px-4 text-[0.75rem] font-semibold text-rose-700 shadow-sm transition hover:bg-rose-100 disabled:opacity-60"
+                          >
+                            Collected on Behalf
+                          </button>
+                        </>
+                      )}
+                      {isFullyCollected(p) && (
+                        <>
+                          <button
+                            disabled
+                            className="inline-flex h-9 items-center justify-center rounded-full bg-emerald-50 px-4 text-[0.75rem] font-semibold text-emerald-700 ring-1 ring-emerald-100"
+                          >
+                            ✅ Already Collected
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setUndoConfirmFor(p)}
+                            disabled={undoingId === p.id}
+                            className="inline-flex h-9 items-center justify-center rounded-full border border-amber-200 bg-amber-50 px-4 text-[0.75rem] font-semibold text-amber-700 shadow-sm transition hover:bg-amber-100 disabled:opacity-60"
+                          >
+                            {undoingId === p.id ? "Undoing..." : "Undo Collection"}
+                          </button>
+                        </>
+                      )}
+                      {p.status === "on-spot" && (
+                        <button
+                          disabled
+                          className="inline-flex h-9 items-center justify-center rounded-full bg-sky-50 px-4 text-[0.75rem] font-semibold text-sky-700 ring-1 ring-sky-100"
+                        >
+                          On-Spot Registration
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <div
@@ -1115,7 +1191,9 @@ export default function DashboardPage() {
                         </span>
                         <span className="inline-flex items-center gap-1.5">
                           {p.tshirtCollected ? (
-                            <span className="text-emerald-600">T-Shirt: ✅ Collected</span>
+                            <span className="text-emerald-600">
+                              T-Shirt: ✅ Collected{p.issuedTshirtSize ? ` (Size: ${p.issuedTshirtSize})` : ""}
+                            </span>
                           ) : (
                             <span className="text-amber-600">T-Shirt: ⏳ Pending</span>
                           )}
@@ -1136,11 +1214,7 @@ export default function DashboardPage() {
                     )}
                   </div>
 
-                  <div
-                    className={`gap-2 pt-1 text-[0.75rem] sm:flex-row sm:items-center sm:justify-between ${
-                      expandedParticipants[p.id] ? "flex flex-col" : "hidden sm:flex"
-                    }`}
-                  >
+                  <div className="hidden gap-2 pt-1 text-[0.75rem] sm:flex sm:flex-row sm:items-center sm:justify-between">
                     {p.bulkTeam ? (
                       <span className="text-[0.7rem] text-slate-500">
                         Bulk team: {p.bulkTeam}
@@ -1161,7 +1235,7 @@ export default function DashboardPage() {
                             onClick={() => {
                               setCollectionFlow("mark");
                               setShowKitModalFor(p);
-                              setKitForm({ bib: false, tshirt: false, goodies: false });
+                              setKitForm({ bib: false, tshirt: false, goodies: false, tshirtSize: p.tshirtSizeCategory || "M" });
                             }}
                             disabled={collectingId === p.id || (!!p.bibCollected && !!p.tshirtCollected && !!p.goodiesCollected)}
                             className="inline-flex items-center justify-center rounded-full bg-[#E11D48] px-3.5 py-1.5 text-[0.7rem] font-semibold text-white shadow-sm transition hover:bg-[#BE123C] disabled:opacity-60"
@@ -1173,8 +1247,9 @@ export default function DashboardPage() {
                             onClick={() => {
                               setCollectionFlow("behalf");
                               setShowKitModalFor(p);
-                              setKitForm({ bib: false, tshirt: false, goodies: false });
-                              setBehalfKitForm({ bib: false, tshirt: false, goodies: false });
+                              const initial = { bib: false, tshirt: false, goodies: false, tshirtSize: p.tshirtSizeCategory || "M" };
+                              setKitForm(initial);
+                              setBehalfKitForm(initial);
                             }}
                             disabled={!!collectingId || (!!p.bibCollected && !!p.tshirtCollected && !!p.goodiesCollected)}
                             className="inline-flex items-center justify-center rounded-full border border-rose-200 bg-rose-50 px-3.5 py-1.5 text-[0.7rem] font-semibold text-rose-700 shadow-sm transition hover:bg-rose-100 disabled:opacity-60"
@@ -1602,11 +1677,12 @@ export default function DashboardPage() {
                 </span>
               </label>
               {(() => {
-                const size = showKitModalFor.tshirtSizeCategory;
-                const qty = size && stats?.tshirtInventory ? (stats.tshirtInventory[size] ?? 0) : null;
-                const tshirtOutOfStock = size != null && qty !== null && qty <= 0 && !showKitModalFor.tshirtCollected;
+                const registeredSize = showKitModalFor.tshirtSizeCategory ?? null;
+                const selectedSize = kitForm.tshirtSize || registeredSize || "M";
+                const qty = selectedSize && stats?.tshirtInventory ? (stats.tshirtInventory[selectedSize] ?? 0) : null;
+                const tshirtOutOfStock = selectedSize != null && qty !== null && qty <= 0 && !showKitModalFor.tshirtCollected;
                 return (
-                  <label className={`flex flex-col gap-1 rounded-lg border p-3 ${showKitModalFor.tshirtCollected ? "cursor-default border-emerald-200 bg-emerald-50" : tshirtOutOfStock ? "cursor-default border-amber-200 bg-amber-50/50" : "cursor-pointer border-slate-200 hover:bg-slate-50"}`}>
+                  <label className={`flex flex-col gap-2 rounded-lg border p-3 ${showKitModalFor.tshirtCollected ? "cursor-default border-emerald-200 bg-emerald-50" : tshirtOutOfStock ? "cursor-default border-amber-200 bg-amber-50/50" : "cursor-pointer border-slate-200 hover:bg-slate-50"}`}>
                     <div className="flex items-center gap-3">
                       <input
                         type="checkbox"
@@ -1616,11 +1692,36 @@ export default function DashboardPage() {
                         className="size-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 disabled:opacity-70"
                       />
                       <span className={`text-sm font-medium ${showKitModalFor.tshirtCollected ? "text-emerald-700" : tshirtOutOfStock ? "text-amber-800" : "text-slate-700"}`}>
-                        {showKitModalFor.tshirtCollected ? "T-Shirt: Already Collected ✓" : tshirtOutOfStock ? `☐ T-Shirt Collect (${size} out of stock)` : "☐ T-Shirt Collect"}
+                        {showKitModalFor.tshirtCollected ? "T-Shirt: Already Collected ✓" : tshirtOutOfStock ? `☐ T-Shirt Collect (${selectedSize} out of stock)` : "☐ T-Shirt Collect"}
                       </span>
                     </div>
+                    {!showKitModalFor.tshirtCollected && (
+                      <div className="ml-7 flex flex-col gap-1.5">
+                        {registeredSize && (
+                          <p className="text-xs text-slate-500">Registered Size: {registeredSize}</p>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <label htmlFor="kit-tshirt-size" className="text-xs font-medium text-slate-600">
+                            Select Size:
+                          </label>
+                          <select
+                            id="kit-tshirt-size"
+                            value={kitForm.tshirtSize || registeredSize || "M"}
+                            onChange={(e) => setKitForm((f) => ({ ...f, tshirtSize: e.target.value }))}
+                            disabled={!!tshirtOutOfStock}
+                            className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-200 disabled:opacity-70"
+                          >
+                            {TSHIRT_SIZES.map((s) => (
+                              <option key={s} value={s}>
+                                {s}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    )}
                     {tshirtOutOfStock && (
-                      <p className="text-xs font-medium text-amber-700">⚠ {size} size T-shirts are out of stock</p>
+                      <p className="ml-7 text-xs font-medium text-amber-700">⚠ {selectedSize} size T-shirts are out of stock</p>
                     )}
                   </label>
                 );
@@ -1643,9 +1744,9 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => {
                   setShowKitModalFor(null);
-                  setKitForm({ bib: false, tshirt: false, goodies: false });
+                  setKitForm({ bib: false, tshirt: false, goodies: false, tshirtSize: "" });
                   setCollectionFlow("mark");
-                  setBehalfKitForm({ bib: false, tshirt: false, goodies: false });
+                  setBehalfKitForm({ bib: false, tshirt: false, goodies: false, tshirtSize: "" });
                 }}
                 disabled={!!collectingId}
                 className="inline-flex h-9 items-center justify-center rounded-full border border-slate-200 bg-white px-4 text-xs font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
@@ -1661,7 +1762,7 @@ export default function DashboardPage() {
                       (kitForm.tshirt && !showKitModalFor.tshirtCollected) ||
                       (kitForm.goodies && !showKitModalFor.goodiesCollected);
                     if (!hasAny) return;
-                    setBehalfKitForm(kitForm);
+                    setBehalfKitForm({ ...kitForm, tshirtSize: kitForm.tshirtSize || showKitModalFor.tshirtSizeCategory || "M" });
                     setShowBehalfModalFor(showKitModalFor);
                     setShowKitModalFor(null);
                     setCollectionFlow("mark");
@@ -1770,7 +1871,7 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => {
                   setShowBulkKitModal(false);
-                  setBulkKitForm({ bib: false, tshirt: false, goodies: false });
+                  setBulkKitForm({ bib: false, tshirt: false, goodies: false, tshirtSize: "" });
                 }}
                 className="inline-flex h-9 items-center justify-center rounded-full border border-slate-200 bg-white px-4 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
               >
@@ -1904,7 +2005,7 @@ export default function DashboardPage() {
                   onClick={() => {
                     setShowBulkModal(false);
                     setBulkForm({ name: "", contact: "", relation: "", idProof: "" });
-                    setBulkKitForm({ bib: false, tshirt: false, goodies: false });
+                    setBulkKitForm({ bib: false, tshirt: false, goodies: false, tshirtSize: "" });
                     setBulkRelationOpen(false);
                   }}
                   disabled={bulkCollecting}
@@ -2040,7 +2141,7 @@ export default function DashboardPage() {
                   onClick={() => {
                     setShowBehalfModalFor(null);
                     setBehalfForm({ name: "", contact: "", relation: "" });
-                    setBehalfKitForm({ bib: false, tshirt: false, goodies: false });
+                    setBehalfKitForm({ bib: false, tshirt: false, goodies: false, tshirtSize: "" });
                     setBehalfRelationOpen(false);
                   }}
                   className="inline-flex h-8 items-center justify-center rounded-full border border-slate-200 bg-white px-3 font-medium text-slate-600 hover:bg-slate-50"

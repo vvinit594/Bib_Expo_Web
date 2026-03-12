@@ -121,9 +121,10 @@ export async function POST(request: Request) {
         skipped += 1;
         continue;
       }
-      if (wouldCollectTshirt && participant.eventId) {
-        const size = extractTshirtSizeCategory(participant.tShirtSize);
-        if (size) {
+      const tshirtSizeForBulk = wouldCollectTshirt ? extractTshirtSizeCategory(participant.tShirtSize) : null;
+      if (wouldCollectTshirt && participant.eventId && tshirtSizeForBulk) {
+        {
+          const size = tshirtSizeForBulk;
           const event = await prisma.expoEvent.findUnique({
             where: { id: participant.eventId },
             select: { tshirtInventory: true },
@@ -170,6 +171,7 @@ export async function POST(request: Request) {
           bibCollectedBy: collectBib ? behalfName.trim() : participant.bibCollectedBy,
           tshirtCollectedBy: collectTshirt ? behalfName.trim() : participant.tshirtCollectedBy,
           goodiesCollectedBy: collectGoodies ? behalfName.trim() : participant.goodiesCollectedBy,
+          ...(collectTshirt && tshirtSizeForBulk && { issuedTshirtSize: tshirtSizeForBulk }),
         },
       });
 
@@ -179,7 +181,7 @@ export async function POST(request: Request) {
           (item === "tshirt" && collectTshirt) ||
           (item === "goodies" && collectGoodies);
         if (didCollect) {
-          const size = item === "tshirt" ? extractTshirtSizeCategory(participant.tShirtSize) : null;
+          const size = item === "tshirt" ? tshirtSizeForBulk : null;
           await prisma.kitCollectionLog.create({
             data: {
               eventId: participant.eventId,

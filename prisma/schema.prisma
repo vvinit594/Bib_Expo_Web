@@ -81,6 +81,7 @@ model Participant {
   bibCollectedBy         String?
   tshirtCollectedBy      String?
   goodiesCollectedBy     String?
+  issuedTshirtSize       String?
   emailSent              Boolean           @default(false)
   emailSentAt            DateTime?
 

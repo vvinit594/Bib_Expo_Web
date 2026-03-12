@@ -8,12 +8,15 @@ import { sendCollectionEmail } from "@/lib/emailService";
 import { extractTshirtSizeCategory } from "@/lib/tshirt";
 import { ACTIVE_EVENT_COOKIE_NAME } from "@/lib/auth";
 
+const TSHIRT_SIZE_OPTIONS = ["XS", "S", "M", "L", "XL", "XXL", "XXXL"] as const;
+
 const collectSchema = z.object({
   type: z.enum(["self", "behalf", "partial"]),
   behalfName: z.string().optional(),
   behalfContact: z.string().optional(),
   behalfRelation: z.string().optional(),
   items: z.array(z.enum(["bib", "tshirt", "goodies"])).optional(),
+  issuedTshirtSize: z.enum(TSHIRT_SIZE_OPTIONS).optional(),
 });
 
 function queueCollectionEmail(params: {
@@ -69,7 +72,7 @@ export async function POST(
       );
     }
 
-    const { type, behalfName, behalfContact, behalfRelation, items } = parsed.data;
+    const { type, behalfName, behalfContact, behalfRelation, items, issuedTshirtSize } = parsed.data;
 
     if (type === "partial" && (!items || items.length === 0)) {
       return NextResponse.json(
@@ -140,6 +143,7 @@ export async function POST(
         tshirtCollected?: boolean;
         tshirtCollectedAt?: Date;
         tshirtCollectedBy?: string;
+        issuedTshirtSize?: string;
         goodiesCollected?: boolean;
         goodiesCollectedAt?: Date;
         goodiesCollectedBy?: string;
@@ -151,7 +155,7 @@ export async function POST(
         data.bibCollectedBy = collectedBy;
       }
       if (collectItems.includes("tshirt") && !participant.tshirtCollected) {
-        const size = extractTshirtSizeCategory(participant.tShirtSize);
+        const size = issuedTshirtSize ?? extractTshirtSizeCategory(participant.tShirtSize);
         if (size && participant.eventId) {
           const event = await prisma.expoEvent.findUnique({
             where: { id: participant.eventId },
@@ -178,6 +182,7 @@ export async function POST(
         data.tshirtCollected = true;
         data.tshirtCollectedAt = now;
         data.tshirtCollectedBy = collectedBy;
+        if (size) data.issuedTshirtSize = size;
       }
       if (collectItems.includes("goodies") && !participant.goodiesCollected) {
         data.goodiesCollected = true;
@@ -219,7 +224,7 @@ export async function POST(
           const key = item === "bib" ? "bibCollected" : item === "tshirt" ? "tshirtCollected" : "goodiesCollected";
           const prev = participant[key as keyof typeof participant];
           if (!prev) {
-            const size = item === "tshirt" ? extractTshirtSizeCategory(participant.tShirtSize) : null;
+            const size = item === "tshirt" ? (issuedTshirtSize ?? extractTshirtSizeCategory(participant.tShirtSize)) : null;
             await prisma.kitCollectionLog.create({
               data: {
                 eventId: participant.eventId,
@@ -268,6 +273,7 @@ export async function POST(
           }
         }
       }
+      const fullCollectionTshirtSize = extractTshirtSizeCategory(participant.tShirtSize);
       await prisma.participant.update({
         where: { id },
         data: {
@@ -288,6 +294,7 @@ export async function POST(
           bibCollectedBy: type === "self" ? counterName : behalfName?.trim() ?? null,
           tshirtCollectedBy: type === "self" ? counterName : behalfName?.trim() ?? null,
           goodiesCollectedBy: type === "self" ? counterName : behalfName?.trim() ?? null,
+          issuedTshirtSize: fullCollectionTshirtSize ?? undefined,
         },
       });
     }
