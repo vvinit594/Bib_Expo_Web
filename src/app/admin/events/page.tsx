@@ -79,7 +79,6 @@ export default function AdminEventSetupPage() {
       setEventName("");
       setEventDate("");
       setFile(null);
-      setTshirtInventory(DEFAULT_INVENTORY);
       router.push(`/dashboard/${json.eventId}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to create event");

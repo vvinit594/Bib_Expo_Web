@@ -124,7 +124,7 @@ export async function POST(
       );
     }
 
-    const counterName = auth.counterName ?? `Counter ${auth.phone.slice(-4)}` ?? "Counter";
+    const counterName = auth.counterName ?? (auth.phone ? `Counter ${auth.phone.slice(-4)}` : "Counter");
     const isBehalfPartial = type === "behalf" && items && items.length > 0;
 
     if (type === "partial" || isBehalfPartial) {
@@ -299,7 +299,7 @@ export async function POST(
       });
     }
 
-    if (type !== "partial" && participant.email && !participant.emailSent) {
+    if (participant.email && !participant.emailSent) {
       queueCollectionEmail({
         participantId: participant.id,
         participantName: participant.name,

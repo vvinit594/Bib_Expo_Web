@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/db";
+import { Role } from "@/generated/prisma";
 import { requireOrganizerOrAdmin } from "@/lib/auth-server";
 
 export async function GET() {
@@ -17,10 +18,10 @@ export async function GET() {
     const isOrganizer = auth.role === "ORGANIZER";
     const isSuperOrganizer = auth.role === "SUPER_ORGANIZER";
     const where = isOrganizer
-      ? { role: "VOLUNTEER" as const, eventId: auth.eventId ?? "__none__" }
+      ? { role: Role.VOLUNTEER, eventId: auth.eventId ?? "__none__" }
       : isSuperOrganizer
-        ? { role: { in: ["VOLUNTEER", "ORGANIZER"] as const }, eventId: auth.eventId ?? "__none__" }
-        : { role: { in: ["VOLUNTEER", "ORGANIZER", "SUPER_ORGANIZER"] as const } };
+        ? { role: { in: [Role.VOLUNTEER, Role.ORGANIZER] }, eventId: auth.eventId ?? "__none__" }
+        : { role: { in: [Role.VOLUNTEER, Role.ORGANIZER, Role.SUPER_ORGANIZER] } };
     const volunteers = await prisma.volunteer.findMany({
       where,
       orderBy: { createdAt: "desc" },

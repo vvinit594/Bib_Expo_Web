@@ -315,7 +315,7 @@ export default function DashboardPage() {
     if (items.length === 0) return;
     const effectiveTshirtSize = kitForm.tshirtSize || showKitModalFor.tshirtSizeCategory || "M";
     const issuedTshirtSize =
-      kitForm.tshirt && TSHIRT_SIZES.includes(effectiveTshirtSize) ? effectiveTshirtSize : undefined;
+      kitForm.tshirt && (TSHIRT_SIZES as readonly string[]).includes(effectiveTshirtSize) ? effectiveTshirtSize : undefined;
     setCollectingId(showKitModalFor.id);
     try {
       const res = await fetch(`/api/participants/${showKitModalFor.id}/collect`, {
@@ -345,7 +345,7 @@ export default function DashboardPage() {
     const issuedTshirtSize =
       items?.includes("tshirt") &&
       behalfKitForm.tshirtSize &&
-      TSHIRT_SIZES.includes(behalfKitForm.tshirtSize)
+      (TSHIRT_SIZES as readonly string[]).includes(behalfKitForm.tshirtSize)
         ? behalfKitForm.tshirtSize
         : undefined;
     try {
@@ -1405,20 +1405,20 @@ export default function DashboardPage() {
                 <dl className="space-y-2">
                   <div className="flex items-center justify-between">
                     <dt className="text-slate-400">Total</dt>
-                    <dd className="text-sm font-semibold text-white">{stats.bulkTotal}</dd>
+                    <dd className="text-sm font-semibold text-white">{stats?.bulkTotal}</dd>
                   </div>
                   <div className="flex items-center justify-between">
                     <dt className="text-slate-400">Collected</dt>
-                    <dd className="text-sm font-semibold text-emerald-400">{stats.bulkCollected ?? "—"}</dd>
+                    <dd className="text-sm font-semibold text-emerald-400">{stats?.bulkCollected ?? "—"}</dd>
                   </div>
                   <div className="flex items-center justify-between">
                     <dt className="text-slate-400">Pending</dt>
-                    <dd className="text-sm font-semibold text-amber-300">{stats.bulkPending ?? "—"}</dd>
+                    <dd className="text-sm font-semibold text-amber-300">{stats?.bulkPending ?? "—"}</dd>
                   </div>
                 </dl>
-                {stats?.bulkTeams && stats.bulkTeams.length > 0 && (
+                {stats?.bulkTeams && stats?.bulkTeams.length > 0 && (
                   <div className="mt-3 space-y-1.5">
-                    {stats.bulkTeams.map((team) => (
+                    {stats?.bulkTeams?.map((team) => (
                       <div key={team.name} className="flex items-center justify-between gap-2 rounded-lg bg-slate-800/50 px-2 py-1.5">
                         <span className="truncate text-[0.7rem] font-medium text-slate-200" title={team.name}>{team.name}</span>
                         <span className="flex shrink-0 items-center gap-1.5">
@@ -1556,20 +1556,20 @@ export default function DashboardPage() {
                     <dl className="space-y-2">
                       <div className="flex items-center justify-between">
                         <dt className="text-slate-400">Total</dt>
-                        <dd className="text-sm font-semibold text-white">{stats.bulkTotal}</dd>
+                        <dd className="text-sm font-semibold text-white">{stats?.bulkTotal}</dd>
                       </div>
                       <div className="flex items-center justify-between">
                         <dt className="text-slate-400">Collected</dt>
-                        <dd className="text-sm font-semibold text-emerald-400">{stats.bulkCollected ?? "—"}</dd>
+                        <dd className="text-sm font-semibold text-emerald-400">{stats?.bulkCollected ?? "—"}</dd>
                       </div>
                       <div className="flex items-center justify-between">
                         <dt className="text-slate-400">Pending</dt>
-                        <dd className="text-sm font-semibold text-amber-300">{stats.bulkPending ?? "—"}</dd>
+                        <dd className="text-sm font-semibold text-amber-300">{stats?.bulkPending ?? "—"}</dd>
                       </div>
                     </dl>
-                    {stats?.bulkTeams && stats.bulkTeams.length > 0 && (
+                    {stats?.bulkTeams && stats?.bulkTeams.length > 0 && (
                       <div className="mt-3 space-y-1.5">
-                        {stats.bulkTeams.map((team) => (
+                        {stats?.bulkTeams?.map((team) => (
                           <div key={team.name} className="flex items-center justify-between gap-2 rounded-lg bg-slate-800/50 px-2 py-1.5">
                             <span className="truncate text-[0.7rem] font-medium text-slate-200" title={team.name}>{team.name}</span>
                             <span className="flex shrink-0 items-center gap-1.5">
