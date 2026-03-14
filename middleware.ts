@@ -38,11 +38,18 @@ export async function middleware(request: NextRequest) {
 
   const payload = token ? await verifyTokenEdge(token) : null;
 
+  // /admin/login is a common typo – redirect to /admin-login once, never put it in redirect param
+  if (pathname === "/admin/login" || pathname.startsWith("/admin/login/")) {
+    return NextResponse.redirect(new URL("/admin-login", request.url));
+  }
+
   // Admin routes: ADMIN only
   if (ADMIN_PATHS.some((p) => pathname.startsWith(p))) {
     if (!payload) {
       const loginUrl = new URL("/admin-login", request.url);
-      loginUrl.searchParams.set("redirect", pathname);
+      // Never redirect back to /admin/login (invalid) – use /admin/events as fallback
+      const safeRedirect = pathname.startsWith("/admin/login") ? "/admin/events" : pathname;
+      loginUrl.searchParams.set("redirect", safeRedirect);
       return NextResponse.redirect(loginUrl);
     }
     if (pathname.startsWith("/admin/events") && payload.role !== "ADMIN") {
