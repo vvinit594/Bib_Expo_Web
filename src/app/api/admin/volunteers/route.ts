@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/db";
-import { Role } from "@/generated/prisma";
+import { Role } from "@prisma/client";
 import { requireOrganizerOrAdmin } from "@/lib/auth-server";
 
 export async function GET() {
