@@ -15,7 +15,7 @@ export function Navbar() {
   return (
     <header className="bg-transparent">
       <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 rounded-2xl border border-white/25 bg-white/20 px-4 py-3 text-slate-900 shadow-lg shadow-slate-900/10 backdrop-blur-md sm:px-6">
-        <Link href="/" className="inline-flex shrink-0 items-center gap-4">
+        <Link href="/dashboard" className="inline-flex shrink-0 items-center gap-4">
           <div className="flex h-12 w-40 shrink-0 items-center overflow-hidden sm:w-48">
             <img src="/Real-logo.svg" alt="Bib Expo" className="h-full w-auto max-w-full object-contain object-left" />
           </div>
