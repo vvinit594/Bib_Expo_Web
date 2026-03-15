@@ -28,12 +28,6 @@ export default function Home() {
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
               <Link
-                href="/admin-login"
-                className="inline-flex h-11 items-center justify-center rounded-full bg-slate-800 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-200"
-              >
-                Admin Login
-              </Link>
-              <Link
                 href="/organizer-login"
                 className="inline-flex h-11 items-center justify-center rounded-full bg-[#E11D48] px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-[#BE123C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200"
               >
