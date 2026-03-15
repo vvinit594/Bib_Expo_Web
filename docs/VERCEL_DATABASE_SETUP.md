@@ -1,3 +1,16 @@
+# Vercel & database setup
+
+## Default admin login (after seed)
+
+If you ran `npx prisma db seed`, the Super Admin was created with:
+
+- **Phone:** `9987688443` (or the value of `ADMIN_PHONE` in your env when you ran seed)
+- **Password:** `admin123` (or the value of `ADMIN_PASSWORD` in your env when you ran seed)
+
+Use these on the **Admin Login** page. If you get "Invalid credentials", double-check the phone number (must match the `phone` column in the `Volunteer` table in Supabase) and that you’re using the correct password.
+
+---
+
 # Fix "Database temporarily unavailable" (503) on Vercel
 
 The 503 error means your app on Vercel cannot connect to the database. Fix it by setting **`DATABASE_URL`** correctly in Vercel.

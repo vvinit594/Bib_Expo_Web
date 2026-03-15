@@ -13,19 +13,16 @@ const ADMIN_PHONE = process.env.ADMIN_PHONE ?? "9987688443";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "admin123";
 
 async function main() {
-  const existing = await prisma.volunteer.findUnique({
-    where: { phone: ADMIN_PHONE },
-  });
-
-  if (existing) {
-    console.log("Admin user already exists:", ADMIN_PHONE);
-    return;
-  }
-
   const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 10);
 
-  await prisma.volunteer.create({
-    data: {
+  await prisma.volunteer.upsert({
+    where: { phone: ADMIN_PHONE },
+    update: {
+      name: "Super Admin",
+      password: passwordHash,
+      role: "ADMIN",
+    },
+    create: {
       name: "Super Admin",
       phone: ADMIN_PHONE,
       password: passwordHash,
@@ -33,7 +30,7 @@ async function main() {
     },
   });
 
-  console.log("Admin user created successfully:");
+  console.log("Admin user ready:");
   console.log("  Phone:", ADMIN_PHONE);
   console.log("  Password:", ADMIN_PASSWORD);
   console.log("\n⚠ Change the password after first login in production!");
