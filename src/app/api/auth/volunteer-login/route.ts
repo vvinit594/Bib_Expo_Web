@@ -5,8 +5,15 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { signToken, AUTH_COOKIE_NAME, ACTIVE_EVENT_COOKIE_NAME } from "@/lib/auth";
 
+// Normalize Indian mobile: allow 11 digits with leading 0 (e.g. 09987688443 → 9987688443)
+function normalizePhone(raw: string): string {
+  const s = raw.trim();
+  if (s.length === 11 && s.startsWith("0")) return s.slice(1);
+  return s;
+}
+
 const loginSchema = z.object({
-  phone: z.string().regex(/^[6-9]\d{9}$/, "Invalid phone number"),
+  phone: z.string().transform(normalizePhone).pipe(z.string().regex(/^[6-9]\d{9}$/, "Invalid phone number")),
   password: z.string().min(1, "Password is required"),
 });
 
@@ -54,6 +61,14 @@ export async function POST(request: Request) {
 
     const { phone, password } = parsed.data;
     const normalizedPhone = phone.trim();
+
+    if (!process.env.DATABASE_URL) {
+      console.error("Volunteer login: DATABASE_URL is not set");
+      return NextResponse.json(
+        { error: "Server configuration error. Please try again later." },
+        { status: 503 }
+      );
+    }
 
     const volunteer = await prisma.volunteer.findUnique({
       where: { phone: normalizedPhone },
@@ -109,7 +124,21 @@ export async function POST(request: Request) {
 
     return response;
   } catch (err) {
+    const message = err instanceof Error ? err.message : "";
     console.error("Volunteer login error:", err);
+    const isDbError =
+      message.includes("DATABASE_URL") ||
+      message.includes("connect") ||
+      message.includes("Connection") ||
+      message.includes("Prisma") ||
+      message.includes("P1001") ||
+      message.includes("P1002");
+    if (isDbError) {
+      return NextResponse.json(
+        { error: "Database temporarily unavailable. Please try again." },
+        { status: 503 }
+      );
+    }
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
