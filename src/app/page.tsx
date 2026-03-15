@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 import { Navbar } from "@/components/marketing/Navbar";
 
@@ -84,10 +85,14 @@ export default function Home() {
                 rel="noopener noreferrer"
                 className="mt-5 flex h-[120px] w-[260px] shrink-0 cursor-pointer items-center justify-center"
               >
-                <img
+                <Image
                   src="/brand_logo.jpeg"
                   alt="Fitskol"
+                  width={260}
+                  height={120}
                   className="max-h-full max-w-full object-contain transition-transform duration-200 ease-in-out hover:scale-105"
+                  loading="lazy"
+                  fetchPriority="low"
                 />
               </a>
             </div>
@@ -106,10 +111,14 @@ export default function Home() {
                 rel="noopener noreferrer"
                 className="mt-5 flex h-[120px] w-[260px] shrink-0 cursor-pointer items-center justify-center"
               >
-                <img
+                <Image
                   src="/bookmyrunlogo.jpeg"
                   alt="BookMyRun"
+                  width={260}
+                  height={120}
                   className="max-h-full max-w-full object-contain transition-transform duration-200 ease-in-out hover:scale-105"
+                  loading="lazy"
+                  fetchPriority="low"
                 />
               </a>
             </div>

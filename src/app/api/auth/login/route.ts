@@ -59,9 +59,19 @@ export async function POST(request: Request) {
       );
     }
 
-    const volunteer = await prisma.volunteer.findUnique({
-      where: { phone: normalizedPhone },
-    });
+    let volunteer;
+    try {
+      volunteer = await prisma.volunteer.findUnique({
+        where: { phone: normalizedPhone },
+      });
+    } catch (dbErr) {
+      const msg = dbErr instanceof Error ? dbErr.message : String(dbErr);
+      console.error("Login DB error:", msg);
+      return NextResponse.json(
+        { error: "Database temporarily unavailable. Please try again." },
+        { status: 503 }
+      );
+    }
 
     if (!volunteer) {
       return NextResponse.json(
@@ -70,7 +80,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const valid = await bcrypt.compare(password, volunteer.password);
+    let valid = false;
+    try {
+      valid = await bcrypt.compare(password, volunteer.password);
+    } catch (bcryptErr) {
+      console.error("Login bcrypt error:", bcryptErr);
+      return NextResponse.json(
+        { error: "Authentication error. Please try again." },
+        { status: 503 }
+      );
+    }
 
     if (!valid) {
       return NextResponse.json(
@@ -87,13 +106,22 @@ export async function POST(request: Request) {
       );
     }
 
-    const token = signToken({
-      id: volunteer.id,
-      phone: volunteer.phone,
-      role: volunteer.role,
-      counterName: volunteer.counterName,
-      eventId: volunteer.eventId ?? null,
-    });
+    let token: string;
+    try {
+      token = signToken({
+        id: volunteer.id,
+        phone: volunteer.phone,
+        role: volunteer.role,
+        counterName: volunteer.counterName,
+        eventId: volunteer.eventId ?? null,
+      });
+    } catch (jwtErr) {
+      console.error("Login JWT error:", jwtErr);
+      return NextResponse.json(
+        { error: "Authentication service error. Please try again." },
+        { status: 503 }
+      );
+    }
 
     const response = NextResponse.json({
       success: true,
@@ -114,17 +142,32 @@ export async function POST(request: Request) {
     return response;
   } catch (err) {
     const message = err instanceof Error ? err.message : "";
-    console.error("Login error:", err);
+    const stack = err instanceof Error ? err.stack : "";
+    console.error("Login error:", message, stack);
     const isDbError =
       message.includes("DATABASE_URL") ||
       message.includes("connect") ||
       message.includes("Connection") ||
       message.includes("Prisma") ||
       message.includes("P1001") ||
-      message.includes("P1002");
+      message.includes("P1002") ||
+      message.includes("ECONNREFUSED") ||
+      message.includes("ETIMEDOUT") ||
+      message.includes("connection");
+    const isAuthError =
+      message.includes("bcrypt") ||
+      message.includes("hash") ||
+      message.includes("JWT") ||
+      message.includes("sign");
     if (isDbError) {
       return NextResponse.json(
         { error: "Database temporarily unavailable. Please try again." },
+        { status: 503 }
+      );
+    }
+    if (isAuthError) {
+      return NextResponse.json(
+        { error: "Authentication service error. Please try again." },
         { status: 503 }
       );
     }

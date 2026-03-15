@@ -7,7 +7,7 @@ export function AuthBrandPanel() {
     <section className="relative hidden overflow-hidden lg:block">
       <div className="absolute inset-0 bg-[linear-gradient(135deg,#FF2B5B_0%,#1F1F3D_100%)]" />
       <div className="relative flex h-full flex-col justify-between p-10 text-white">
-        <Link href="/" className="inline-flex items-center gap-3">
+        <Link href="/" className="inline-flex items-center gap-3" prefetch={false}>
           <span className="grid size-10 place-items-center rounded-2xl bg-white/15 text-base font-semibold ring-1 ring-white/20">
             B
           </span>
