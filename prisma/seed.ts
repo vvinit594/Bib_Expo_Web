@@ -4,7 +4,9 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 const url = process.env.DATABASE_URL;
-if (!url) throw new Error("DATABASE_URL is not set");
+if (!url) throw new Error("DATABASE_URL is not set. Add it to your .env file.");
+// For Supabase: use the Transaction pooler URL (port 6543, host *.pooler.supabase.com), not the direct URL (db.*.supabase.co).
+// See docs/VERCEL_DATABASE_SETUP.md if you get "Can't reach database server".
 
 const adapter = new PrismaPg({ connectionString: url });
 const prisma = new PrismaClient({ adapter });

@@ -11,6 +11,28 @@ Use these on the **Admin Login** page. If you get "Invalid credentials", double-
 
 ---
 
+## "Can't reach database server" when running `npx prisma db seed`
+
+If you see:
+
+```
+Can't reach database server at db.xxxxx.supabase.co
+```
+
+your `.env` is using Supabase's **direct** connection URL (`db.xxx.supabase.co`, port 5432). That host is often unreachable from your local machine.
+
+**Fix:** Use the **Transaction pooler** URL in `.env` for `DATABASE_URL`:
+
+1. Supabase Dashboard → **Settings** → **Database**.
+2. Under **Connection string**, open **URI**.
+3. Choose the **Transaction** (pooler) tab — host like `aws-0-[region].pooler.supabase.com`, **port 6543**.
+4. Copy that URI, replace `[YOUR-PASSWORD]` with your database password, set as `DATABASE_URL` in `.env`.
+5. Run again: `npx prisma db seed`.
+
+Use the same pooler URL in Vercel (see below).
+
+---
+
 # Fix "Database temporarily unavailable" (503) on Vercel
 
 The 503 error means your app on Vercel cannot connect to the database. Fix it by setting **`DATABASE_URL`** correctly in Vercel.
